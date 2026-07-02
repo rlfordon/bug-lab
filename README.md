@@ -3,13 +3,20 @@
 A creature-mixing terrarium game. Splice two bugs together in the Lab, release
 the hybrid into a living garden, and watch what happens to the ecosystem.
 
+**▶️ Play it now: https://rlfordon.github.io/bug-lab/**
+
 ## How to run it
 
-Double-click `index.html` — it opens in the browser and just works.
-No installs, no internet needed.
+Easiest: play online at the link above.
 
-(If the browser ever complains, you can also run a tiny local server:
-`python -m http.server 8123` in this folder, then open http://localhost:8123)
+Or run it locally: double-click `index.html` — it opens in the browser and
+just works. No installs, no internet needed. (If the browser ever complains,
+you can also run a tiny local server: `python -m http.server 8123` in this
+folder, then open http://localhost:8123)
+
+Remember: your saved world lives per-address, so pick one way to play and
+stick with it — or move worlds around with 💾 export / 📂 import in the
+Designer Panel.
 
 ## How to play
 
