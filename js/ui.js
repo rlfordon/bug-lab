@@ -425,10 +425,26 @@ var UI = (function () {
       });
     });
 
+    // three secret ways in: press ` … or type "magic" … or
+    // click the 🐛 Bug Lab title five times fast
+    function toggleDesigner() {
+      document.getElementById("designer").classList.toggle("hidden");
+    }
+    var typed = "";
     document.addEventListener("keydown", function (ev) {
-      if (ev.key === "`") {
-        document.getElementById("designer").classList.toggle("hidden");
+      if (ev.key === "`") { toggleDesigner(); return; }
+      if (ev.target.tagName === "INPUT" || ev.target.tagName === "SELECT") return;
+      if (ev.key && ev.key.length === 1) {
+        typed = (typed + ev.key.toLowerCase()).slice(-5);
+        if (typed === "magic") { typed = ""; toggleDesigner(); }
       }
+    });
+    var titleClicks = 0, titleTimer = null;
+    document.querySelector("#topbar h1").addEventListener("click", function () {
+      titleClicks++;
+      clearTimeout(titleTimer);
+      titleTimer = setTimeout(function () { titleClicks = 0; }, 1500);
+      if (titleClicks >= 5) { titleClicks = 0; toggleDesigner(); }
     });
 
     document.getElementById("rainFoodBtn").addEventListener("click", function () {

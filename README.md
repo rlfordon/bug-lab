@@ -53,7 +53,9 @@ with `?v=N` in `index.html` — bump them together when editing the code).
 
 ## The secret (parents only!)
 
-Press **`` ` ``** (the backtick key, above Tab) to open the **Designer Panel** —
+There are three secret ways to open the **Designer Panel**: press
+**`` ` ``** (the backtick key, if your keyboard has one), **type the word
+`magic`**, or **click the 🐛 Bug Lab title five times fast**. Inside:
 live sliders for sim speed, mutation rate, food, and more, plus a
 "rain leaves" button and a world reset.
 
