@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bug Lab 🐛</title>
+<link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+
+<header id="topbar">
+  <h1>🐛 Bug Lab</h1>
+  <nav id="tabs">
+    <button class="tab active" data-screen="terrarium">🌿 Terrarium</button>
+    <button class="tab" data-screen="lab">🧪 The Lab</button>
+    <button class="tab" data-screen="journal">📖 Journal</button>
+  </nav>
+  <div id="popcount">🐞 0</div>
+</header>
+
+<main>
+  <!-- ===== TERRARIUM ===== -->
+  <section id="screen-terrarium" class="screen active">
+    <canvas id="world" width="960" height="600"></canvas>
+    <div id="toast"></div>
+    <div class="terra-bar">
+      <span class="terra-tip">🍃 Click to drop leaves · ✋ drag or arrow keys to explore!</span>
+      <button id="freshGardenBtn">🌍 Grow a new world</button>
+    </div>
+  </section>
+
+  <!-- ===== THE LAB ===== -->
+  <section id="screen-lab" class="screen">
+    <div class="lab-wrap">
+      <h2>Pick two bugs to splice together!</h2>
+      <div class="lab-bench">
+        <div class="parent-slot" id="parentA">
+          <canvas width="140" height="140"></canvas>
+          <div class="slot-name">Pick a bug…</div>
+        </div>
+        <button id="mixBtn" disabled>⚡ MIX! ⚡</button>
+        <div class="parent-slot" id="parentB">
+          <canvas width="140" height="140"></canvas>
+          <div class="slot-name">Pick a bug…</div>
+        </div>
+      </div>
+
+      <div id="mixResult" class="hidden">
+        <div class="result-card">
+          <div id="legendaryBadge" class="hidden">🌟 LEGENDARY!!! 🌟</div>
+          <div id="mutationBadge" class="hidden">✨ MUTATION! ✨</div>
+          <canvas id="resultPortrait" width="200" height="200"></canvas>
+          <h3 id="resultName"></h3>
+          <p id="resultFlavor"></p>
+          <div id="resultTraits" class="trait-chips"></div>
+          <div class="result-buttons">
+            <button id="releaseBtn">🌿 Release 3 into the Terrarium!</button>
+            <button id="mixAgainBtn">🔁 Mix again</button>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="picker-title">Your bug collection</h2>
+      <div class="collection-tools">
+        <input type="text" id="labSearch" placeholder="🔍 Find a bug by name…">
+        <select id="labSort"></select>
+      </div>
+      <div id="labPicker" class="card-grid"></div>
+    </div>
+  </section>
+
+  <!-- ===== JOURNAL ===== -->
+  <section id="screen-journal" class="screen">
+    <div class="journal-wrap">
+      <h2>Bug Journal</h2>
+      <p class="journal-sub" id="journalSub">Every species you discover or invent gets a page!</p>
+      <div class="collection-tools">
+        <input type="text" id="journalSearch" placeholder="🔍 Find a bug by name…">
+        <select id="journalSort"></select>
+      </div>
+      <div id="journalGrid" class="card-grid big"></div>
+    </div>
+  </section>
+</main>
+
+<!-- ===== SECRET DESIGNER PANEL (press ` to open) ===== -->
+<aside id="designer" class="hidden">
+  <h2>🔧 Designer Panel</h2>
+  <p class="designer-sub">Shhh… game designers only!</p>
+
+  <label>Sim speed <span id="v-simSpeed"></span>
+    <input type="range" id="s-simSpeed" min="0" max="3" step="0.1">
+  </label>
+  <label>Mutation chance <span id="v-mutationRate"></span>
+    <input type="range" id="s-mutationRate" min="0" max="1" step="0.05">
+  </label>
+  <label>Food abundance <span id="v-foodRate"></span>
+    <input type="range" id="s-foodRate" min="0" max="3" step="0.1">
+  </label>
+  <label>Bug speed boost <span id="v-bugSpeedMult"></span>
+    <input type="range" id="s-bugSpeedMult" min="0.2" max="5" step="0.1">
+  </label>
+  <label>Max bugs <span id="v-maxBugs"></span>
+    <input type="range" id="s-maxBugs" min="10" max="200" step="5">
+  </label>
+
+  <button id="rainFoodBtn">🍃 Make it rain leaves!</button>
+  <button id="exportBtn">💾 Save world to a file</button>
+  <button id="importBtn">📂 Load world from a file</button>
+  <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+  <button id="resetWorldBtn" class="danger">💥 Erase EVERYTHING, start over</button>
+
+  <p class="designer-hint">Psst… the <em>real</em> magic lives in a file called <code>bugs.js</code> 😉</p>
+</aside>
+
+<!-- ===== WORLD PICKER (opens from "Grow a new world") ===== -->
+<div id="worldPicker" class="modal hidden">
+  <div class="modal-card">
+    <h2>🌍 Grow a new world!</h2>
+    <p>Pick what kind of world to grow. Everything in your Journal stays safe!</p>
+    <div id="flavorButtons"></div>
+    <button id="cancelWorldBtn" class="cancel-btn">Never mind</button>
+  </div>
+</div>
+
+<!-- Kid-editable data first, then the engine -->
+<!-- (?v= numbers stop the browser mixing old and new copies — bump them together) -->
+<script src="bugs.js?v=3"></script>
+<script src="js/genes.js?v=3"></script>
+<script src="js/render.js?v=3"></script>
+<script src="js/sim.js?v=3"></script>
+<script src="js/ui.js?v=3"></script>
+<script src="js/main.js?v=3"></script>
+</body>
+</html>

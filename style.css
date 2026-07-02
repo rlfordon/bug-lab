@@ -1,0 +1,450 @@
+/* ===== Bug Lab — chunky, sunny, friendly ===== */
+
+* { box-sizing: border-box; }
+
+:root {
+  --grass: #7ec850;
+  --grass-dark: #5aa338;
+  --cream: #fdf6e3;
+  --brown: #6b4a2b;
+  --sky: #bde8ff;
+  --accent: #ff8c42;
+  --accent-dark: #e06d1f;
+  --card: #fffdf5;
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  font-family: "Comic Sans MS", "Comic Neue", "Segoe UI", sans-serif;
+  background: linear-gradient(#bde8ff 0%, #d8f3c0 100%);
+  color: var(--brown);
+}
+
+/* ===== Top bar ===== */
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 8px 18px;
+  background: var(--cream);
+  border-bottom: 4px solid var(--brown);
+}
+
+#topbar h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0 #f4d9a0;
+}
+
+#tabs { display: flex; gap: 8px; }
+
+.tab {
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--brown);
+  background: #f4e6c5;
+  border: 3px solid var(--brown);
+  border-radius: 14px;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.tab:hover { transform: scale(1.06) rotate(-1deg); }
+.tab.active {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 3px 0 var(--accent-dark);
+}
+
+#popcount {
+  margin-left: auto;
+  font-size: 1.1rem;
+  font-weight: bold;
+  background: #f4e6c5;
+  border: 3px solid var(--brown);
+  border-radius: 14px;
+  padding: 4px 14px;
+}
+
+/* ===== Screens ===== */
+main { display: flex; justify-content: center; padding: 14px; }
+
+.screen { display: none; width: 100%; max-width: 1000px; }
+.screen.active { display: block; }
+
+/* ===== Terrarium ===== */
+#screen-terrarium { position: relative; text-align: center; }
+
+#world {
+  width: 100%;
+  max-width: 960px;
+  border: 6px solid var(--brown);
+  border-radius: 18px;
+  background: var(--grass);
+  cursor: pointer;
+  box-shadow: 0 8px 0 rgba(107, 74, 43, 0.35);
+}
+
+#toast {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  background: var(--cream);
+  border: 3px solid var(--brown);
+  border-radius: 14px;
+  padding: 6px 18px;
+  font-weight: bold;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+#toast.show { opacity: 1; }
+
+.terra-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 960px;
+  margin: 8px auto 0;
+  padding: 0 4px;
+}
+.terra-tip { font-size: 0.95rem; font-weight: bold; color: #5a4326; }
+#freshGardenBtn {
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--brown);
+  background: #b6e388;
+  border: 3px solid var(--brown);
+  border-radius: 12px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+#freshGardenBtn:hover { transform: scale(1.05); }
+
+/* ===== Lab ===== */
+.lab-wrap, .journal-wrap { text-align: center; }
+
+.lab-bench {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  margin: 10px 0 20px;
+}
+
+.parent-slot {
+  background: var(--card);
+  border: 4px dashed var(--brown);
+  border-radius: 18px;
+  padding: 10px;
+  width: 170px;
+}
+.parent-slot.filled { border-style: solid; background: #fff; }
+.parent-slot canvas { display: block; margin: 0 auto; }
+.slot-name { font-weight: bold; min-height: 1.4em; }
+
+#mixBtn {
+  font-family: inherit;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+  background: var(--accent);
+  border: 4px solid var(--brown);
+  border-radius: 20px;
+  padding: 16px 26px;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--accent-dark);
+  transition: transform 0.1s;
+}
+#mixBtn:hover:not(:disabled) { transform: scale(1.08) rotate(2deg); }
+#mixBtn:active:not(:disabled) { transform: translateY(4px); box-shadow: none; }
+#mixBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+#mixResult { margin-bottom: 18px; }
+.result-card {
+  display: inline-block;
+  background: var(--card);
+  border: 4px solid var(--brown);
+  border-radius: 22px;
+  padding: 16px 30px;
+  box-shadow: 0 6px 0 rgba(107, 74, 43, 0.3);
+  animation: pop-in 0.35s ease-out;
+}
+@keyframes pop-in {
+  0% { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+  70% { transform: scale(1.1) rotate(2deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.result-card h3 { margin: 6px 0 2px; font-size: 1.5rem; }
+.result-card p { margin: 4px 0 10px; font-style: italic; }
+
+#mutationBadge {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #b526d8;
+  animation: sparkle 0.8s infinite alternate;
+}
+@keyframes sparkle {
+  from { transform: scale(1); }
+  to { transform: scale(1.12); }
+}
+
+.result-buttons { display: flex; gap: 10px; justify-content: center; }
+
+.result-buttons button, #rainFoodBtn, #resetWorldBtn {
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: bold;
+  border: 3px solid var(--brown);
+  border-radius: 14px;
+  padding: 8px 14px;
+  cursor: pointer;
+  background: #b6e388;
+  color: var(--brown);
+}
+.result-buttons button:hover { transform: scale(1.05); }
+#mixAgainBtn { background: #f4e6c5; }
+
+.picker-title { margin-top: 8px; }
+
+/* ===== Cards (lab picker + journal) ===== */
+.card-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  padding-bottom: 30px;
+}
+
+.bug-card {
+  position: relative;
+  background: var(--card);
+  border: 3px solid var(--brown);
+  border-radius: 16px;
+  padding: 10px;
+  width: 150px;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.bug-card:hover { transform: scale(1.06) rotate(-1.5deg); }
+.bug-card.selected { outline: 4px solid var(--accent); }
+.bug-card canvas { display: block; margin: 0 auto; }
+.bug-card .card-name { font-weight: bold; margin-top: 4px; }
+.bug-card .card-count { font-size: 0.85rem; color: #9b7b55; }
+
+.card-grid.big .bug-card { width: 210px; cursor: default; }
+.card-grid.big .bug-card:hover { transform: none; }
+.card-grid.big .card-flavor { font-size: 0.85rem; font-style: italic; margin: 6px 0; }
+
+.trait-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+  margin: 6px 0;
+}
+.trait-chips span {
+  background: #e8f4d4;
+  border: 2px solid var(--grass-dark);
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #3f7a22;
+}
+
+.stat-bar {
+  height: 10px;
+  background: #eee2c8;
+  border: 2px solid var(--brown);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 3px 0;
+}
+.stat-bar > div { height: 100%; background: var(--accent); }
+.stat-label {
+  font-size: 0.75rem;
+  text-align: left;
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+.stat-value { font-weight: bold; color: var(--accent-dark); }
+
+.journal-sub { margin-top: -6px; }
+
+/* ===== Legendary bugs ===== */
+#legendaryBadge {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #b8860b;
+  animation: sparkle 0.6s infinite alternate;
+}
+
+.result-card.legendary,
+.bug-card.legendary {
+  background: linear-gradient(135deg, #fff8dc, #ffe9a0);
+  border-color: #b8860b;
+  box-shadow: 0 0 18px rgba(255, 200, 40, 0.75);
+}
+
+.bug-card.mystery {
+  background: #4a3f68;
+  border-color: #2e2748;
+  color: #e8e0ff;
+}
+.bug-card.mystery .card-name { letter-spacing: 4px; }
+.bug-card.mystery .card-flavor { color: #cfc4f0; }
+.mystery-tag {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #ffd166;
+  margin-top: 6px;
+}
+
+.collection-tools {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 6px 0 16px;
+}
+.collection-tools input,
+.collection-tools select {
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--brown);
+  background: var(--card);
+  border: 3px solid var(--brown);
+  border-radius: 12px;
+  padding: 6px 12px;
+}
+.collection-tools input { width: 250px; }
+
+.fav-btn {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  background: none;
+  border: none;
+  font-size: 1.15rem;
+  cursor: pointer;
+  padding: 2px;
+  z-index: 2;
+}
+.fav-btn:hover { transform: scale(1.25); }
+
+.setfree-btn {
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: var(--brown);
+  background: #f4e6c5;
+  border: 2px solid var(--brown);
+  border-radius: 10px;
+  padding: 4px 10px;
+  margin: 8px 0 0 6px;
+  cursor: pointer;
+}
+.setfree-btn:hover { transform: scale(1.05); }
+
+.release-more {
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: var(--brown);
+  background: #b6e388;
+  border: 2px solid var(--brown);
+  border-radius: 10px;
+  padding: 4px 10px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+.release-more:hover { transform: scale(1.05); }
+
+/* ===== Designer panel ===== */
+#designer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 270px;
+  background: #2e2a24;
+  color: #f4e6c5;
+  padding: 18px;
+  border-left: 5px solid var(--accent);
+  z-index: 50;
+  overflow-y: auto;
+  box-shadow: -6px 0 18px rgba(0,0,0,0.4);
+}
+#designer h2 { margin: 0 0 2px; }
+.designer-sub { margin: 0 0 14px; font-size: 0.85rem; opacity: 0.8; }
+#designer label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+#designer input[type="range"] { width: 100%; accent-color: var(--accent); }
+#designer label span { float: right; color: var(--accent); }
+#designer button { display: block; width: 100%; margin: 8px 0; }
+#designer .danger { background: #e05c5c; color: white; }
+.designer-hint { font-size: 0.8rem; opacity: 0.75; margin-top: 18px; }
+.designer-hint code { color: #ffd166; }
+
+/* ===== World picker modal ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(46, 42, 36, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-card {
+  background: var(--cream);
+  border: 5px solid var(--brown);
+  border-radius: 22px;
+  padding: 22px 30px;
+  text-align: center;
+  max-width: 420px;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.25);
+  animation: pop-in 0.3s ease-out;
+}
+.modal-card h2 { margin: 0 0 4px; }
+.modal-card p { margin: 0 0 14px; }
+#flavorButtons { display: flex; flex-direction: column; gap: 8px; }
+.flavor-btn {
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: var(--brown);
+  background: #b6e388;
+  border: 3px solid var(--brown);
+  border-radius: 14px;
+  padding: 10px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.flavor-btn:hover { transform: scale(1.04) rotate(-0.5deg); }
+.cancel-btn {
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--brown);
+  background: #f4e6c5;
+  border: 3px solid var(--brown);
+  border-radius: 12px;
+  padding: 6px 14px;
+  margin-top: 12px;
+  cursor: pointer;
+}
+
+.hidden { display: none !important; }
