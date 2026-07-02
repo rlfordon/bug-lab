@@ -377,16 +377,26 @@ var UI = (function () {
 
     document.getElementById("freshGardenBtn").addEventListener("click", function () {
       buttonBox.innerHTML = "";
+      var prog = Sim.progress();
+      document.getElementById("pickerProgress").textContent =
+        "🐛 You've discovered " + prog.species + " species!";
       Object.keys(WORLD_FLAVORS).forEach(function (key) {
         var btn = document.createElement("button");
-        btn.className = "flavor-btn";
-        btn.textContent = WORLD_FLAVORS[key].label;
-        btn.addEventListener("click", function () {
-          picker.classList.add("hidden");
-          Sim.freshGarden(key);
-          Sim.save();
-          toast("A whole new world grew! " + WORLD_FLAVORS[key].label);
-        });
+        var needed = prog.flavors[key] || 0;
+        if (Sim.flavorUnlocked(key)) {
+          btn.className = "flavor-btn";
+          btn.textContent = WORLD_FLAVORS[key].label;
+          btn.addEventListener("click", function () {
+            picker.classList.add("hidden");
+            Sim.freshGarden(key);
+            Sim.save();
+            toast("A whole new world grew! " + WORLD_FLAVORS[key].label);
+          });
+        } else {
+          btn.className = "flavor-btn locked";
+          btn.disabled = true;
+          btn.textContent = "🔒 " + WORLD_FLAVORS[key].label + " — " + needed + " species";
+        }
         buttonBox.appendChild(btn);
       });
       picker.classList.remove("hidden");
@@ -423,7 +433,7 @@ var UI = (function () {
 
     document.getElementById("rainFoodBtn").addEventListener("click", function () {
       for (var i = 0; i < 6; i++) {
-        Sim.dropFood(60 + Math.random() * (Sim.W - 120), 60 + Math.random() * (Sim.H - 120), 3);
+        Sim.dropFood(60 + Math.random() * (Sim.W() - 120), 60 + Math.random() * (Sim.H() - 120), 3);
       }
       toast("It's raining leaves! 🍃🍃🍃");
     });

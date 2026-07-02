@@ -207,7 +207,10 @@ var Render = (function () {
   //  flavor (from WORLD_FLAVORS in bugs.js). Same seed + flavor
   //  always grows the exact same world.
   // ================================================================
-  var WORLD_W = 2400, WORLD_H = 1500;
+  var BIG_W = 2400, BIG_H = 1500;
+  var SMALL_W = 960, SMALL_H = 600;
+  var WORLD_W = SMALL_W, WORLD_H = SMALL_H; // set by generate()
+  var AREA_SCALE = 1; // how big this world is compared to the biggest
   var BASE = "meadow"; // what MOST of the world is made of
   var PONDS = [];      // {x, y, r}
   var BIOMES = [];     // patches of other biomes {type, x, y, r, lobes}
@@ -255,11 +258,15 @@ var Render = (function () {
     return b;
   }
 
-  function generate(seed, flavorKey) {
+  function generate(seed, flavorKey, big) {
     lastSeed = seed;
+    WORLD_W = big ? BIG_W : SMALL_W;
+    WORLD_H = big ? BIG_H : SMALL_H;
+    AREA_SCALE = (WORLD_W * WORLD_H) / (BIG_W * BIG_H);
     var rng = makeRng(seed);
     function rr(min, max) { return min + rng() * (max - min); }
     function ri(min, max) { return min + Math.floor(rng() * (max - min + 1)); }
+    function scaled(n, minimum) { return Math.max(minimum, Math.round(n * AREA_SCALE)); }
 
     var flavor = (typeof WORLD_FLAVORS !== "undefined" && WORLD_FLAVORS[flavorKey]) || { base: "meadow", forest: 1, desert: 1, snow: 0, ponds: 2 };
     var counts;
@@ -275,6 +282,12 @@ var Render = (function () {
       };
     }
     counts[BASE] = 0; // a patch of the base biome would be invisible
+
+    // the starter garden is a simple sunny meadow with one pond
+    if (!big) {
+      BASE = "meadow";
+      counts = { meadow: 0, forest: 0, desert: 0, snow: 0, ponds: 1 };
+    }
 
     // --- ponds first: everything else keeps out of the water ---
     PONDS = [];
@@ -318,13 +331,15 @@ var Render = (function () {
     // --- rocks and grass tufts for decoration ---
     ROCKS = [];
     guard = 0;
-    while (ROCKS.length < 18 && guard++ < 120) {
+    var rockTarget = scaled(18, 5);
+    while (ROCKS.length < rockTarget && guard++ < 120) {
       var rk = { x: rr(60, WORLD_W - 60), y: rr(60, WORLD_H - 60), r: rr(16, 32), rot: rr(0, Math.PI) };
       if (inAnyPond(rk.x, rk.y, 40)) continue;
       ROCKS.push(rk);
     }
     GRASSES = [];
-    for (var gp = 0; gp < 9; gp++) {
+    var grassTarget = scaled(9, 3);
+    for (var gp = 0; gp < grassTarget; gp++) {
       GRASSES.push({ x: rr(100, WORLD_W - 100), y: rr(100, WORLD_H - 100), r: rr(70, 140) });
     }
 
@@ -332,7 +347,8 @@ var Render = (function () {
     // harsh biomes (desert & snow) grow far fewer hiding spots!
     HIDEOUTS = [];
     guard = 0;
-    while (HIDEOUTS.length < 42 && guard++ < 1000) {
+    var hideoutTarget = scaled(42, 12);
+    while (HIDEOUTS.length < hideoutTarget && guard++ < 1000) {
       var hx = rr(50, WORLD_W - 50), hy = rr(50, WORLD_H - 50);
       if (inAnyPond(hx, hy, 45)) continue;
       var biome = biomeAt(hx, hy);
@@ -421,6 +437,7 @@ var Render = (function () {
     var ctx = bgCanvas.getContext("2d");
     var rng = makeRng(lastSeed ^ 0x9e3779b9);
     function rr(min, max) { return min + rng() * (max - min); }
+    function scaled(n, minimum) { return Math.max(minimum, Math.round(n * AREA_SCALE)); }
 
     // the whole world starts as the base biome's floor
     ctx.fillStyle = BIOME_STYLE[BASE].floor;
@@ -439,7 +456,8 @@ var Render = (function () {
     });
 
     // mottling + darker grass, only on green ground
-    for (var i = 0; i < 550; i++) {
+    var mottleCount = scaled(550, 120);
+    for (var i = 0; i < mottleCount; i++) {
       var gx = rr(0, WORLD_W), gy = rr(0, WORLD_H);
       var mb = biomeAt(gx, gy);
       if (mb === "desert" || mb === "snow") continue;
@@ -459,7 +477,8 @@ var Render = (function () {
     // grass tufts on green ground
     ctx.strokeStyle = "rgba(60,130,40,0.55)";
     ctx.lineWidth = 2;
-    for (var tuft = 0; tuft < 450; tuft++) {
+    var tuftCount = scaled(450, 90);
+    for (var tuft = 0; tuft < tuftCount; tuft++) {
       var tx = rr(0, WORLD_W), ty = rr(0, WORLD_H);
       var tb = biomeAt(tx, ty);
       if (tb === "desert" || tb === "snow") continue;
@@ -472,21 +491,21 @@ var Render = (function () {
     }
 
     // biome decorations, wherever each biome lives (patch OR whole base)
-    scatterInBiome("forest", 300, 4000, rng, function (x, y) { drawTree(ctx, x, y, rng); });
-    scatterInBiome("desert", 480, 4000, rng, function (x, y) {
+    scatterInBiome("forest", scaled(300, 40), 4000, rng, function (x, y) { drawTree(ctx, x, y, rng); });
+    scatterInBiome("desert", scaled(480, 60), 4000, rng, function (x, y) {
       ctx.fillStyle = "rgba(190,160,90,0.5)";
       ctx.beginPath();
       ctx.arc(x, y, rr(1.5, 4), 0, Math.PI * 2);
       ctx.fill();
     });
-    scatterInBiome("desert", 34, 2000, rng, function (x, y) { drawCactus(ctx, x, y); });
-    scatterInBiome("snow", 400, 4000, rng, function (x, y) {
+    scatterInBiome("desert", scaled(34, 6), 2000, rng, function (x, y) { drawCactus(ctx, x, y); });
+    scatterInBiome("snow", scaled(400, 50), 4000, rng, function (x, y) {
       ctx.fillStyle = "rgba(255,255,255,0.8)";
       ctx.beginPath();
       ctx.arc(x, y, rr(1.5, 3.5), 0, Math.PI * 2);
       ctx.fill();
     });
-    scatterInBiome("snow", 60, 2000, rng, function (x, y) {
+    scatterInBiome("snow", scaled(60, 10), 2000, rng, function (x, y) {
       ctx.fillStyle = "rgba(255,255,255,0.55)";
       ctx.beginPath();
       ctx.ellipse(x, y, rr(20, 45), rr(8, 16), rr(0, Math.PI), 0, Math.PI * 2);
@@ -634,8 +653,8 @@ var Render = (function () {
     generate: generate,
     inAnyPond: inAnyPond,
     biomeAt: biomeAt,
-    WORLD_W: WORLD_W,
-    WORLD_H: WORLD_H,
+    worldW: function () { return WORLD_W; },
+    worldH: function () { return WORLD_H; },
     PONDS: function () { return PONDS; },
     BIOMES: function () { return BIOMES; },
     HIDEOUTS: function () { return HIDEOUTS; },

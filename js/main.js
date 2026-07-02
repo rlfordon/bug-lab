@@ -9,15 +9,17 @@
   UI.init();
   UI.updatePopCount();
 
-  // the camera looks at one part of the big world
+  // the camera looks at one part of the world
   var cam = {
-    x: (Sim.W - VIEW_W) / 2,
-    y: (Sim.H - VIEW_H) / 2,
+    x: (Sim.W() - VIEW_W) / 2,
+    y: (Sim.H() - VIEW_H) / 2,
   };
   function clampCam() {
-    cam.x = Math.max(0, Math.min(Sim.W - VIEW_W, cam.x));
-    cam.y = Math.max(0, Math.min(Sim.H - VIEW_H, cam.y));
+    cam.x = Math.max(0, Math.min(Sim.W() - VIEW_W, cam.x));
+    cam.y = Math.max(0, Math.min(Sim.H() - VIEW_H, cam.y));
   }
+  // is there more world than the screen can show?
+  function worldIsBig() { return Sim.W() > VIEW_W || Sim.H() > VIEW_H; }
 
   function canvasPoint(ev) {
     var rect = canvas.getBoundingClientRect();
@@ -36,8 +38,9 @@
   var BIOME_MINI_COLORS = { meadow: "#69b444", forest: "#2e6b1e", desert: "#e0c37a", snow: "#e8f2f8" };
 
   function drawMinimap() {
+    if (!worldIsBig()) return; // the starter garden fits on one screen
     var m = miniRect();
-    var sx = m.w / Sim.W, sy = m.h / Sim.H;
+    var sx = m.w / Sim.W(), sy = m.h / Sim.H();
     ctx.save();
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = BIOME_MINI_COLORS[Render.BASE()] || "#69b444";
@@ -91,10 +94,10 @@
     var p = canvasPoint(ev);
     if (p.x < 0 || p.y < 0 || p.x > VIEW_W || p.y > VIEW_H) return;
     var m = miniRect();
-    if (p.x >= m.x && p.y >= m.y) {
+    if (worldIsBig() && p.x >= m.x && p.y >= m.y) {
       // clicked the minimap: jump the camera there
-      cam.x = ((p.x - m.x) / m.w) * Sim.W - VIEW_W / 2;
-      cam.y = ((p.y - m.y) / m.h) * Sim.H - VIEW_H / 2;
+      cam.x = ((p.x - m.x) / m.w) * Sim.W() - VIEW_W / 2;
+      cam.y = ((p.y - m.y) / m.h) * Sim.H() - VIEW_H / 2;
       clampCam();
       return;
     }
@@ -141,6 +144,7 @@
     lastTime = now;
 
     panFromKeys(dt);
+    clampCam(); // the world can grow or shrink under us
     Sim.update(dt);
 
     ctx.save();

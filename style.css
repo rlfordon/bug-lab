@@ -434,6 +434,14 @@ main { display: flex; justify-content: center; padding: 14px; }
   transition: transform 0.1s;
 }
 .flavor-btn:hover { transform: scale(1.04) rotate(-0.5deg); }
+.flavor-btn.locked {
+  background: #d9d2c2;
+  color: #8d8371;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+.flavor-btn.locked:hover { transform: none; }
+#pickerProgress { font-weight: bold; color: var(--accent-dark); }
 .cancel-btn {
   font-family: inherit;
   font-size: 0.9rem;

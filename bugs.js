@@ -37,6 +37,19 @@ var SETTINGS = {
 //    snow:   freezing! Slow AND hungry. Only the toughest survive.
 //    ponds:  how many ponds (bugs can't swim!)
 // ----------------------------------------------------------------
+// ----------------------------------------------------------------
+//  🔓 UNLOCKS — discover species to grow your world!
+//
+//  bigWorld: how many species until your garden becomes a huge
+//            scrolling world.
+//  flavors:  how many species unlock each world type.
+//  (You start with 5 bugs, so the counting starts there.)
+// ----------------------------------------------------------------
+var UNLOCKS = {
+  bigWorld: 8,
+  flavors: { meadow: 0, forest: 12, desert: 16, snow: 20, wild: 25 },
+};
+
 var WORLD_FLAVORS = {
   meadow: { label: "🌼 Sunny Meadow", base: "meadow", forest: 1, desert: 1, snow: 0, ponds: 2 },
   forest: { label: "🌲 Deep Forest", base: "forest", meadow: 3, desert: 0, snow: 0, ponds: 2 },

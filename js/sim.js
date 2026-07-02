@@ -2,8 +2,17 @@
 
 var Sim = (function () {
 
-  var W = Render.WORLD_W, H = Render.WORLD_H;
-  var MAX_FOOD = 160;
+  var W = Render.worldW(), H = Render.worldH();
+
+  function syncSize() {
+    W = Render.worldW();
+    H = Render.worldH();
+  }
+
+  // food and population caps shrink with the world
+  function areaScale() { return Math.max(0.35, (W * H) / (2400 * 1500)); }
+  function maxFood() { return Math.round(160 * areaScale()); }
+  function worldMaxBugs() { return Math.round(SETTINGS.maxBugs * areaScale()); }
 
   var species = [];   // every species ever discovered {id, name, flavor, genes, starter}
   var bugs = [];      // living bugs {speciesId, x, y, angle, energy, age, lifespan, eggCd, phase}
@@ -16,8 +25,47 @@ var Sim = (function () {
   var kills = 0;
   var worldSeed = 1;
   var worldFlavor = "meadow";
+  var bestSpecies = 0; // most species ever discovered — drives unlocks
 
   function newSeed() { return 1 + Math.floor(Math.random() * 999999999); }
+
+  // ---------- unlocks ----------
+  function unlocksCfg() {
+    var u = typeof UNLOCKS !== "undefined" ? UNLOCKS : {};
+    return {
+      bigWorld: u.bigWorld || 8,
+      flavors: u.flavors || { meadow: 0, forest: 12, desert: 16, snow: 20, wild: 25 },
+    };
+  }
+
+  function bigUnlocked() { return bestSpecies >= unlocksCfg().bigWorld; }
+
+  function flavorUnlocked(key) {
+    var at = unlocksCfg().flavors[key];
+    return bestSpecies >= (at === undefined ? 0 : at);
+  }
+
+  function checkUnlocks(prev) {
+    var cfg = unlocksCfg();
+    // the big moment: the garden grows into a whole world
+    if (prev < cfg.bigWorld && bestSpecies >= cfg.bigWorld) {
+      Render.generate(worldSeed, worldFlavor, true);
+      syncSize();
+      for (var f = 0; f < 40; f++) {
+        var spot = randomSpot(true);
+        food.push({ x: spot.x, y: spot.y, wob: rnd(0, Math.PI * 2) });
+      }
+      toast("🎉 " + bestSpecies + " species! Your garden GREW into a whole world — explore it!");
+      return;
+    }
+    for (var key in cfg.flavors) {
+      var at = cfg.flavors[key];
+      if (at > 0 && prev < at && bestSpecies >= at) {
+        var label = typeof WORLD_FLAVORS !== "undefined" && WORLD_FLAVORS[key] ? WORLD_FLAVORS[key].label : key;
+        toast("🔓 New world type unlocked: " + label + "!");
+      }
+    }
+  }
 
   var toast = function () {};   // ui.js plugs a real function in here
 
@@ -41,6 +89,11 @@ var Sim = (function () {
   function addSpecies(name, flavor, genes, starter, legendary) {
     var sp = { id: nextSpeciesId++, name: name, flavor: flavor, genes: genes, starter: !!starter, legendary: !!legendary };
     species.push(sp);
+    if (species.length > bestSpecies) {
+      var prev = bestSpecies;
+      bestSpecies = species.length;
+      checkUnlocks(prev);
+    }
     return sp;
   }
 
@@ -100,7 +153,7 @@ var Sim = (function () {
 
   function dropFood(x, y, count) {
     for (var i = 0; i < count; i++) {
-      if (food.length >= MAX_FOOD * 2) break;
+      if (food.length >= maxFood() * 2) break;
       var fx = x + rnd(-25, 25);
       var fy = y + rnd(-25, 25);
       fx = Math.max(20, Math.min(W - 20, fx));
@@ -138,7 +191,7 @@ var Sim = (function () {
 
     // leaves sprout over time — rarely in deserts or snow
     foodTimer -= dt;
-    if (foodTimer <= 0 && food.length < MAX_FOOD) {
+    if (foodTimer <= 0 && food.length < maxFood()) {
       var spot = randomSpot();
       var spotBiome = Render.biomeAt(spot.x, spot.y);
       if ((spotBiome === "desert" || spotBiome === "snow") && Math.random() < 0.7) {
@@ -354,13 +407,14 @@ var Sim = (function () {
       // well-fed bugs lay an egg — but not if their own family
       // is already crowding the garden (no species gets to hog it all)
       // hunters stay rare, like real ecosystems
+      var popCap = worldMaxBugs();
       var familyCap = g.diet === "bugs"
-        ? Math.max(2, SETTINGS.maxBugs * 0.08)
-        : Math.max(6, SETTINGS.maxBugs * 0.25);
+        ? Math.max(2, popCap * 0.08)
+        : Math.max(6, popCap * 0.25);
       // hunters lay after a good meal; grazers need a real energy surplus
       var eggAt = g.diet === "bugs" ? 75 : 85;
       if (bug.energy > eggAt && bug.eggCd <= 0 &&
-          bugs.length + eggs.length < SETTINGS.maxBugs &&
+          bugs.length + eggs.length < popCap &&
           aliveCount(bug.speciesId) < familyCap) {
         bug.energy -= 40;
         bug.eggCd = rnd(12, 20) / (g.babies || 1); // busy families lay much faster
@@ -418,6 +472,7 @@ var Sim = (function () {
         nextSpeciesId: nextSpeciesId,
         worldSeed: worldSeed,
         worldFlavor: worldFlavor,
+        bestSpecies: bestSpecies,
         species: species,
         bugs: bugs.map(function (b) {
           return { speciesId: b.speciesId, x: b.x, y: b.y, energy: b.energy, age: b.age };
@@ -433,7 +488,8 @@ var Sim = (function () {
       if (!sp.starter) continue;
       releaseSpecies(sp.id, sp.genes.diet === "bugs" ? 2 : 4);
     }
-    for (var f = 0; f < 45; f++) {
+    var starterFood = Math.round(45 * areaScale());
+    for (var f = 0; f < starterFood; f++) {
       var spot = randomSpot(true);
       food.push({ x: spot.x, y: spot.y, wob: rnd(0, Math.PI * 2) });
     }
@@ -446,9 +502,11 @@ var Sim = (function () {
     food = [];
     poofs = [];
     nextSpeciesId = 1;
+    bestSpecies = 0; // progression starts over — the garden is small again
     worldSeed = newSeed();
     worldFlavor = flavorKey || "meadow";
-    Render.generate(worldSeed, worldFlavor);
+    Render.generate(worldSeed, worldFlavor, bigUnlocked());
+    syncSize();
     for (var i = 0; i < STARTER_BUGS.length; i++) {
       var s = STARTER_BUGS[i];
       addSpecies(s.name, s.flavor, s.genes, true);
@@ -463,7 +521,10 @@ var Sim = (function () {
     nextSpeciesId = data.nextSpeciesId || species.length + 1;
     worldSeed = data.worldSeed || newSeed();
     worldFlavor = data.worldFlavor || "meadow";
-    Render.generate(worldSeed, worldFlavor);
+    // unlocks never go backwards — count the save's species too
+    bestSpecies = Math.max(data.bestSpecies || 0, species.length);
+    Render.generate(worldSeed, worldFlavor, bigUnlocked());
+    syncSize();
     eggs = data.eggs || [];
     bugs = [];
     food = [];
@@ -489,7 +550,8 @@ var Sim = (function () {
         }
       }
     }
-    for (var f = 0; f < 25 && food.length < 25; f++) {
+    var loadFood = Math.round(25 * areaScale());
+    for (var f = 0; f < loadFood && food.length < loadFood; f++) {
       var spot = randomSpot(true);
       food.push({ x: spot.x, y: spot.y, wob: rnd(0, Math.PI * 2) });
     }
@@ -559,13 +621,15 @@ var Sim = (function () {
     food = [];
     poofs = [];
     worldSeed = newSeed();
-    if (flavorKey) worldFlavor = flavorKey;
-    Render.generate(worldSeed, worldFlavor);
+    if (flavorKey && flavorUnlocked(flavorKey)) worldFlavor = flavorKey;
+    Render.generate(worldSeed, worldFlavor, bigUnlocked());
+    syncSize();
     spawnStarters();
   }
 
   return {
-    W: W, H: H,
+    W: function () { return W; },
+    H: function () { return H; },
     update: update,
     draw: draw,
     load: load,
@@ -584,6 +648,11 @@ var Sim = (function () {
     foodList: function () { return food; },
     killCount: function () { return kills; },
     worldInfo: function () { return { seed: worldSeed, flavor: worldFlavor }; },
+    progress: function () {
+      var cfg = unlocksCfg();
+      return { species: bestSpecies, bigWorld: bigUnlocked(), bigWorldAt: cfg.bigWorld, flavors: cfg.flavors };
+    },
+    flavorUnlocked: flavorUnlocked,
     setToast: function (fn) { toast = fn; },
   };
 })();
