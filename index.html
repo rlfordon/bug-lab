@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bug Lab 🐛</title>
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -103,7 +103,16 @@
               <button id="undoBtn">↩️ Undo</button>
               <button id="clearBtn">🗑️ Clear</button>
             </div>
-            <p class="draw-hint">Draw your bug facing right ➡️ — that's the way it walks!</p>
+            <div class="draw-tools">
+              <span class="tools-label">Stamps:</span>
+              <button class="shape-btn" data-shape="circle" title="circle">⚪</button>
+              <button class="shape-btn" data-shape="oval" title="oval">🥚</button>
+              <button class="shape-btn" data-shape="triangle" title="triangle">🔺</button>
+              <button class="shape-btn" data-shape="star" title="star">⭐</button>
+              <button class="shape-btn" data-shape="heart" title="heart">❤️</button>
+            </div>
+            <p class="draw-hint">Stamp shapes (drag to size them!), paint with the brush,
+              and draw your bug facing right ➡️ — that's the way it walks!</p>
           </div>
         </div>
       </div>
@@ -174,11 +183,11 @@
 
 <!-- Kid-editable data first, then the engine -->
 <!-- (?v= numbers stop the browser mixing old and new copies — bump them together) -->
-<script src="bugs.js?v=9"></script>
-<script src="js/genes.js?v=9"></script>
-<script src="js/render.js?v=9"></script>
-<script src="js/sim.js?v=9"></script>
-<script src="js/ui.js?v=9"></script>
-<script src="js/main.js?v=9"></script>
+<script src="bugs.js?v=10"></script>
+<script src="js/genes.js?v=10"></script>
+<script src="js/render.js?v=10"></script>
+<script src="js/sim.js?v=10"></script>
+<script src="js/ui.js?v=10"></script>
+<script src="js/main.js?v=10"></script>
 </body>
 </html>

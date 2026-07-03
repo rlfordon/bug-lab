@@ -614,6 +614,47 @@ var UI = (function () {
     drawCanvas = document.getElementById("drawCanvas");
     drawCtx = drawCanvas.getContext("2d");
     var sketching = false, lastPt = null;
+    var tool = "brush";                 // or "circle" / "oval" / "triangle" / "star" / "heart"
+    var shapeBase = null, shapeCenter = null;
+
+    // stamp a shape: press = center, drag = size (and tilt), release = done
+    function stampShape(c, p) {
+      var dx = p.x - c.x, dy = p.y - c.y;
+      var r = Math.max(8, Math.hypot(dx, dy));
+      var ang = Math.atan2(dy, dx);
+      drawCtx.save();
+      drawCtx.translate(c.x, c.y);
+      if (tool === "oval" || tool === "triangle" || tool === "star") drawCtx.rotate(ang);
+      drawCtx.fillStyle = drawColor;
+      drawCtx.strokeStyle = "rgba(0,0,0,0.18)";
+      drawCtx.lineWidth = 3;
+      drawCtx.beginPath();
+      if (tool === "circle") {
+        drawCtx.arc(0, 0, r, 0, Math.PI * 2);
+      } else if (tool === "oval") {
+        drawCtx.ellipse(0, 0, r, r * 0.6, 0, 0, Math.PI * 2);
+      } else if (tool === "triangle") {
+        for (var t3 = 0; t3 < 3; t3++) {
+          var a3 = (t3 / 3) * Math.PI * 2;
+          drawCtx[t3 === 0 ? "moveTo" : "lineTo"](Math.cos(a3) * r, Math.sin(a3) * r);
+        }
+        drawCtx.closePath();
+      } else if (tool === "star") {
+        for (var t5 = 0; t5 < 10; t5++) {
+          var a5 = (t5 / 10) * Math.PI * 2 - Math.PI / 2;
+          var r5 = t5 % 2 === 0 ? r : r * 0.45;
+          drawCtx[t5 === 0 ? "moveTo" : "lineTo"](Math.cos(a5) * r5, Math.sin(a5) * r5);
+        }
+        drawCtx.closePath();
+      } else if (tool === "heart") {
+        drawCtx.moveTo(0, r);
+        drawCtx.bezierCurveTo(-r * 1.2, r * 0.05, -r * 0.7, -r * 0.9, 0, -r * 0.35);
+        drawCtx.bezierCurveTo(r * 0.7, -r * 0.9, r * 1.2, r * 0.05, 0, r);
+      }
+      drawCtx.fill();
+      drawCtx.stroke();
+      drawCtx.restore();
+    }
 
     function stroke(p) {
       drawCtx.save();
@@ -637,13 +678,43 @@ var UI = (function () {
       drawUndo.push(drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
       if (drawUndo.length > 25) drawUndo.shift();
       lastPt = drawPointFromEvent(ev);
-      stroke(lastPt);
+      if (tool === "brush") {
+        stroke(lastPt);
+      } else {
+        shapeCenter = lastPt;
+        shapeBase = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
+        stampShape(shapeCenter, lastPt);
+      }
     });
     drawCanvas.addEventListener("pointermove", function (ev) {
-      if (sketching) stroke(drawPointFromEvent(ev));
+      if (!sketching) return;
+      var p = drawPointFromEvent(ev);
+      if (tool === "brush") {
+        stroke(p);
+      } else {
+        drawCtx.putImageData(shapeBase, 0, 0); // live-resize the stamp
+        stampShape(shapeCenter, p);
+      }
     });
     ["pointerup", "pointercancel", "pointerleave"].forEach(function (evt) {
-      drawCanvas.addEventListener(evt, function () { sketching = false; });
+      drawCanvas.addEventListener(evt, function () {
+        sketching = false;
+        shapeBase = null;
+      });
+    });
+
+    // shape stamp buttons
+    function clearShapeActive() {
+      document.querySelectorAll(".shape-btn").forEach(function (x) { x.classList.remove("active"); });
+    }
+    document.querySelectorAll(".shape-btn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        tool = b.dataset.shape;
+        erasing = false;
+        document.getElementById("eraserBtn").classList.remove("active");
+        clearShapeActive();
+        b.classList.add("active");
+      });
     });
 
     // palette swatches
@@ -664,12 +735,16 @@ var UI = (function () {
 
     document.getElementById("eraserBtn").addEventListener("click", function () {
       erasing = true;
+      tool = "brush";
+      clearShapeActive();
       this.classList.add("active");
       paletteBox.querySelectorAll(".swatch").forEach(function (x) { x.classList.remove("active"); });
     });
     document.querySelectorAll(".brush-btn").forEach(function (b) {
       b.addEventListener("click", function () {
         brushSize = parseInt(b.dataset.brush, 10);
+        tool = "brush";
+        clearShapeActive();
         document.querySelectorAll(".brush-btn").forEach(function (x) { x.classList.remove("active"); });
         b.classList.add("active");
       });
