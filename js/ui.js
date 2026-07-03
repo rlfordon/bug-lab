@@ -452,6 +452,12 @@ var UI = (function () {
       if (titleClicks >= 5) { titleClicks = 0; toggleDesigner(); }
     });
 
+    document.getElementById("unlockAllBtn").addEventListener("click", function () {
+      Sim.unlockAll();
+      updatePopCount(); // refresh the Bug Maker tab label
+      toast("🔓 Everything unlocked! The 🛠️ Bug Maker is ready.");
+    });
+
     document.getElementById("rainFoodBtn").addEventListener("click", function () {
       for (var i = 0; i < 6; i++) {
         Sim.dropFood(60 + Math.random() * (Sim.W() - 120), 60 + Math.random() * (Sim.H() - 120), 3);

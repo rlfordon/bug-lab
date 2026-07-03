@@ -410,6 +410,7 @@ main { display: flex; justify-content: center; padding: 14px; }
 #designer label span { float: right; color: var(--accent); }
 #designer button { display: block; width: 100%; margin: 8px 0; }
 #designer .danger { background: #e05c5c; color: white; }
+#unlockAllBtn { background: #ffd166; color: #6b4a2b; font-weight: bold; }
 .designer-hint { font-size: 0.8rem; opacity: 0.75; margin-top: 18px; }
 
 #statsBox {

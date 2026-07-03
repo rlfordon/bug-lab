@@ -54,6 +54,24 @@ var Sim = (function () {
     return bestSpecies >= (at === undefined ? 0 : at);
   }
 
+  // grown-up shortcut (from the Designer Panel): unlock everything now
+  function unlockAll() {
+    var cfg = unlocksCfg();
+    var target = Math.max(bestSpecies, cfg.bigWorld, cfg.maker);
+    for (var k in cfg.flavors) target = Math.max(target, cfg.flavors[k]);
+    bestSpecies = target;
+    // if the garden is still small, grow it into a full world right now
+    if (bigUnlocked() && Render.worldW() < 2400) {
+      Render.generate(worldSeed, worldFlavor, true);
+      syncSize();
+      for (var f = 0; f < 40 && food.length < 40; f++) {
+        var spot = randomSpot(true);
+        food.push({ x: spot.x, y: spot.y, wob: rnd(0, Math.PI * 2) });
+      }
+    }
+    save();
+  }
+
   function checkUnlocks(prev) {
     var cfg = unlocksCfg();
     // the big moment: the garden grows into a whole world
@@ -716,6 +734,7 @@ var Sim = (function () {
     worldTime: function () { return worldTime; },
     worldInfo: function () { return { seed: worldSeed, flavor: worldFlavor }; },
     setViewCenter: function (fn) { viewCenter = fn; },
+    unlockAll: unlockAll,
     progress: function () {
       var cfg = unlocksCfg();
       return {
