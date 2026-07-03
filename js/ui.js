@@ -428,7 +428,9 @@ var UI = (function () {
     // three secret ways in: press ` … or type "magic" … or
     // click the 🐛 Bug Lab title five times fast
     function toggleDesigner() {
-      document.getElementById("designer").classList.toggle("hidden");
+      var panel = document.getElementById("designer");
+      panel.classList.toggle("hidden");
+      if (!panel.classList.contains("hidden")) renderStats();
     }
     var typed = "";
     document.addEventListener("keydown", function (ev) {
@@ -499,6 +501,46 @@ var UI = (function () {
       }
     });
   }
+
+  // ---------- world stats (inside the designer panel) ----------
+  function renderStats() {
+    var list = document.getElementById("statsList");
+    list.innerHTML = "";
+    var mins = Math.floor(Sim.worldTime() / 60);
+    document.getElementById("statsAge").textContent =
+      mins < 1 ? "just born" : mins + " min old";
+
+    var allStats = Sim.stats();
+    Sim.speciesList().forEach(function (sp) {
+      var s = allStats[sp.id] || {};
+      var alive = Sim.aliveCount(sp.id);
+      var hasStory = s.born || s.starved || s.old || s.eaten || s.meals;
+      if (!alive && !hasStory) return; // nothing to tell yet
+
+      var bits = [alive + " alive", (s.born || 0) + " hatched"];
+      if (sp.genes.diet === "bugs") {
+        bits.push("🍖 " + (s.meals || 0) + " meals");
+        if (s.zeroMeal) bits.push("😢 " + s.zeroMeal + " died hungry");
+      } else if (s.eaten) {
+        bits.push("🍴 " + s.eaten + " eaten");
+      }
+      if (s.starved) bits.push("💀 " + s.starved + " starved");
+      if (s.old) bits.push("🕰️ " + s.old + " old age");
+
+      var row = document.createElement("div");
+      row.className = "stat-row";
+      var name = document.createElement("b");
+      name.textContent = sp.name;
+      row.appendChild(name);
+      row.appendChild(document.createTextNode(" — " + bits.join(" · ")));
+      list.appendChild(row);
+    });
+  }
+
+  // keep the stats fresh while the panel is open
+  setInterval(function () {
+    if (!document.getElementById("designer").classList.contains("hidden")) renderStats();
+  }, 1000);
 
   // ---------- wiring it all up ----------
   function init() {

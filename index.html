@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bug Lab 🐛</title>
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -111,6 +111,11 @@
   <input type="file" id="importFile" accept=".json,application/json" class="hidden">
   <button id="resetWorldBtn" class="danger">💥 Erase EVERYTHING, start over</button>
 
+  <div id="statsBox">
+    <h3>📊 This world's story <span id="statsAge"></span></h3>
+    <div id="statsList"></div>
+  </div>
+
   <p class="designer-hint">Psst… the <em>real</em> magic lives in a file called <code>bugs.js</code> 😉</p>
 </aside>
 
@@ -127,11 +132,11 @@
 
 <!-- Kid-editable data first, then the engine -->
 <!-- (?v= numbers stop the browser mixing old and new copies — bump them together) -->
-<script src="bugs.js?v=6"></script>
-<script src="js/genes.js?v=6"></script>
-<script src="js/render.js?v=6"></script>
-<script src="js/sim.js?v=6"></script>
-<script src="js/ui.js?v=6"></script>
-<script src="js/main.js?v=6"></script>
+<script src="bugs.js?v=7"></script>
+<script src="js/genes.js?v=7"></script>
+<script src="js/render.js?v=7"></script>
+<script src="js/sim.js?v=7"></script>
+<script src="js/ui.js?v=7"></script>
+<script src="js/main.js?v=7"></script>
 </body>
 </html>

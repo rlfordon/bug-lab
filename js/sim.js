@@ -23,6 +23,14 @@ var Sim = (function () {
   var wandererTimer = 0;
   var nextSpeciesId = 1;
   var kills = 0;
+  var worldTime = 0;   // how long this world has been alive (seconds)
+  var stats = {};      // per-species life stories, keyed by species id
+
+  function statFor(id) {
+    if (!stats[id]) stats[id] = { born: 0, starved: 0, old: 0, eaten: 0, meals: 0, zeroMeal: 0 };
+    return stats[id];
+  }
+
   var worldSeed = 1;
   var worldFlavor = "meadow";
   var bestSpecies = 0; // most species ever discovered — drives unlocks
@@ -138,6 +146,7 @@ var Sim = (function () {
       eggCd: rnd(6, 14),
       phase: rnd(0, 100),
       rest: 0,
+      meals: 0,
     };
     bugs.push(bug);
     return bug;
@@ -188,6 +197,7 @@ var Sim = (function () {
   function update(dt) {
     dt = dt * SETTINGS.simSpeed;
     if (dt <= 0) return;
+    worldTime += dt;
 
     // leaves sprout over time — rarely in deserts or snow
     foodTimer -= dt;
@@ -221,6 +231,7 @@ var Sim = (function () {
       eggs[e].timer -= dt;
       if (eggs[e].timer <= 0) {
         spawnBug(eggs[e].speciesId, eggs[e].x, eggs[e].y);
+        statFor(eggs[e].speciesId).born++;
         eggs.splice(e, 1);
       }
     }
@@ -329,6 +340,9 @@ var Sim = (function () {
             bug.energy = Math.min(100, bug.energy + 55);
             bug.rest = 4; // food coma
             kills++;
+            bug.meals = (bug.meals || 0) + 1;
+            statFor(bug.speciesId).meals++;
+            statFor(prey.speciesId).eaten++;
             poofs.push({ x: prey.x, y: prey.y, t: 0 });
             bugs.splice(bugs.indexOf(prey), 1);
             if (bugs.indexOf(bug) < 0) continue; // safety
@@ -423,6 +437,9 @@ var Sim = (function () {
 
       // starving or very old bugs poof away
       if (bug.energy <= 0 || bug.age > bug.lifespan) {
+        var st = statFor(bug.speciesId);
+        if (bug.energy <= 0) st.starved++; else st.old++;
+        if (g.diet === "bugs" && !bug.meals) st.zeroMeal++; // never caught a thing
         poofs.push({ x: bug.x, y: bug.y, t: 0 });
         var sid = bug.speciesId;
         bugs.splice(i, 1);
@@ -473,6 +490,8 @@ var Sim = (function () {
         worldSeed: worldSeed,
         worldFlavor: worldFlavor,
         bestSpecies: bestSpecies,
+        worldTime: Math.round(worldTime),
+        stats: stats,
         species: species,
         bugs: bugs.map(function (b) {
           return { speciesId: b.speciesId, x: b.x, y: b.y, energy: b.energy, age: b.age };
@@ -503,6 +522,8 @@ var Sim = (function () {
     poofs = [];
     nextSpeciesId = 1;
     bestSpecies = 0; // progression starts over — the garden is small again
+    worldTime = 0;
+    stats = {};
     worldSeed = newSeed();
     worldFlavor = flavorKey || "meadow";
     Render.generate(worldSeed, worldFlavor, bigUnlocked());
@@ -523,6 +544,8 @@ var Sim = (function () {
     worldFlavor = data.worldFlavor || "meadow";
     // unlocks never go backwards — count the save's species too
     bestSpecies = Math.max(data.bestSpecies || 0, species.length);
+    worldTime = data.worldTime || 0;
+    stats = data.stats || {};
     Render.generate(worldSeed, worldFlavor, bigUnlocked());
     syncSize();
     eggs = data.eggs || [];
@@ -611,6 +634,7 @@ var Sim = (function () {
     for (var s = 0; s < species.length; s++) {
       if (species[s].id === id) { species.splice(s, 1); break; }
     }
+    delete stats[id];
   }
 
   // soft reset: grow a whole new world (new seed, chosen flavor),
@@ -620,6 +644,8 @@ var Sim = (function () {
     eggs = [];
     food = [];
     poofs = [];
+    worldTime = 0;  // a new world starts a new story
+    stats = {};
     worldSeed = newSeed();
     if (flavorKey && flavorUnlocked(flavorKey)) worldFlavor = flavorKey;
     Render.generate(worldSeed, worldFlavor, bigUnlocked());
@@ -647,6 +673,8 @@ var Sim = (function () {
     bugList: function () { return bugs; },
     foodList: function () { return food; },
     killCount: function () { return kills; },
+    stats: function () { return stats; },
+    worldTime: function () { return worldTime; },
     worldInfo: function () { return { seed: worldSeed, flavor: worldFlavor }; },
     progress: function () {
       var cfg = unlocksCfg();
