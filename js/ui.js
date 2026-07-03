@@ -660,13 +660,21 @@ var UI = (function () {
         drawCtx.restore();
         return;
       }
-      if (tool === "oval" || tool === "triangle" || tool === "star") drawCtx.rotate(ang);
+      if (tool === "oval" || tool === "triangle" || tool === "star" || tool === "rectangle") drawCtx.rotate(ang);
       drawCtx.fillStyle = drawColor;
       drawCtx.strokeStyle = "rgba(0,0,0,0.18)";
       drawCtx.lineWidth = 3;
       drawCtx.beginPath();
       if (tool === "circle") {
         drawCtx.arc(0, 0, r, 0, Math.PI * 2);
+      } else if (tool === "square") {
+        var sq = r * 0.28; // soft, cute corners
+        if (drawCtx.roundRect) drawCtx.roundRect(-r, -r, r * 2, r * 2, sq);
+        else drawCtx.rect(-r, -r, r * 2, r * 2);
+      } else if (tool === "rectangle") {
+        var rc = r * 0.28;
+        if (drawCtx.roundRect) drawCtx.roundRect(-r, -r * 0.5, r * 2, r, rc);
+        else drawCtx.rect(-r, -r * 0.5, r * 2, r);
       } else if (tool === "oval") {
         drawCtx.ellipse(0, 0, r, r * 0.6, 0, 0, Math.PI * 2);
       } else if (tool === "triangle") {
