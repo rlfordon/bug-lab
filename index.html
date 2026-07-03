@@ -3,8 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Always check for a fresh version so updates reach every device -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Bug Lab 🐛</title>
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 
@@ -178,6 +182,7 @@
   </div>
 
   <p class="designer-hint">Psst… the <em>real</em> magic lives in a file called <code>bugs.js</code> 😉</p>
+  <p class="designer-version">Bug Lab build <span id="buildVersion">?</span></p>
 </aside>
 
 <!-- ===== WORLD PICKER (opens from "Grow a new world") ===== -->
@@ -193,11 +198,11 @@
 
 <!-- Kid-editable data first, then the engine -->
 <!-- (?v= numbers stop the browser mixing old and new copies — bump them together) -->
-<script src="bugs.js?v=15"></script>
-<script src="js/genes.js?v=15"></script>
-<script src="js/render.js?v=15"></script>
-<script src="js/sim.js?v=15"></script>
-<script src="js/ui.js?v=15"></script>
-<script src="js/main.js?v=15"></script>
+<script src="bugs.js?v=17"></script>
+<script src="js/genes.js?v=17"></script>
+<script src="js/render.js?v=17"></script>
+<script src="js/sim.js?v=17"></script>
+<script src="js/ui.js?v=17"></script>
+<script src="js/main.js?v=17"></script>
 </body>
 </html>

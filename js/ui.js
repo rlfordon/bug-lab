@@ -2,6 +2,8 @@
 
 var UI = (function () {
 
+  var BUGLAB_VERSION = "17";
+
   var parentA = null;   // selected species for slot A
   var parentB = null;
   var pendingMix = null; // { genes, mutated, name, flavor } waiting to be released
@@ -417,6 +419,8 @@ var UI = (function () {
   var SLIDERS = ["simSpeed", "mutationRate", "foodRate", "bugSpeedMult", "maxBugs"];
 
   function initDesigner() {
+    var vEl = document.getElementById("buildVersion");
+    if (vEl) vEl.textContent = BUGLAB_VERSION;
     SLIDERS.forEach(function (key) {
       var slider = document.getElementById("s-" + key);
       var label = document.getElementById("v-" + key);
@@ -881,26 +885,31 @@ var UI = (function () {
       toast("Draw your bug first! ✏️");
       return;
     }
-    var name = document.getElementById("makerName").value.trim();
-    if (!name) name = Genes.makeName(Sim.speciesList().map(function (s) { return s.name; }));
-    var taken = Sim.speciesList().some(function (s) { return s.name.toLowerCase() === name.toLowerCase(); });
-    if (taken) {
-      toast("There's already a bug named " + name + "! Pick another name.");
-      return;
+    // never let a hiccup silently swallow the release — always say something
+    try {
+      var name = document.getElementById("makerName").value.trim();
+      if (!name) name = Genes.makeName(Sim.speciesList().map(function (s) { return s.name; }));
+      var taken = Sim.speciesList().some(function (s) { return s.name.toLowerCase() === name.toLowerCase(); });
+      if (taken) {
+        toast("There's already a bug named " + name + "! Pick another name.");
+        return;
+      }
+      var flavor = document.getElementById("makerFlavor").value.trim() || Genes.pick(FLAVOR_LINES);
+      var sp = Sim.addSpecies(name, flavor, JSON.parse(JSON.stringify(makerGenes)), false, false);
+      sp.made = true;
+      if (makerMode === "draw") {
+        sp.art = drawCanvas.toDataURL("image/png");
+        if (stampedParts.length) sp.parts = JSON.parse(JSON.stringify(stampedParts));
+      }
+      Sim.releaseSpecies(sp.id, 3);
+      Sim.save();
+      toast("Three little " + sp.name + "s scurry into the garden! 🎉");
+      document.getElementById("makerName").value = "";
+      document.getElementById("makerFlavor").value = "";
+      showScreen("terrarium");
+    } catch (err) {
+      toast("⚠️ Couldn't release that bug — try setting a few bugs free first!");
     }
-    var flavor = document.getElementById("makerFlavor").value.trim() || Genes.pick(FLAVOR_LINES);
-    var sp = Sim.addSpecies(name, flavor, JSON.parse(JSON.stringify(makerGenes)), false, false);
-    sp.made = true;
-    if (makerMode === "draw") {
-      sp.art = drawCanvas.toDataURL("image/png");
-      if (stampedParts.length) sp.parts = JSON.parse(JSON.stringify(stampedParts));
-    }
-    Sim.releaseSpecies(sp.id, 3);
-    Sim.save();
-    toast("Three little " + sp.name + "s scurry into the garden! 🎉");
-    document.getElementById("makerName").value = "";
-    document.getElementById("makerFlavor").value = "";
-    showScreen("terrarium");
   }
 
   function initMaker() {

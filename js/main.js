@@ -25,6 +25,12 @@
   Sim.setViewCenter(function () {
     return { x: cam.x + VIEW_W / 2, y: cam.y + VIEW_H / 2 };
   });
+  // ...and the camera swings to greet them, so a release is never missed
+  Sim.setFocus(function (x, y) {
+    cam.x = x - VIEW_W / 2;
+    cam.y = y - VIEW_H / 2;
+    clampCam();
+  });
 
   function canvasPoint(ev) {
     var rect = canvas.getBoundingClientRect();

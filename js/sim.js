@@ -176,6 +176,7 @@ var Sim = (function () {
   }
 
   var viewCenter = null; // main.js tells us where the player is looking
+  var focusFn = null;    // main.js lets us move the camera to a release
 
   // released bugs should arrive where the player can SEE them
   function releaseSpot() {
@@ -196,6 +197,8 @@ var Sim = (function () {
       var bug = spawnBug(speciesId, spot.x + rnd(-30, 30), spot.y + rnd(-30, 30));
       if (bug) bug.energy = 85; // released bugs arrive well-fed and ready to settle in
     }
+    // point the camera right at the new bugs so they're impossible to miss
+    if (!spreadOut && focusFn) focusFn(spot.x, spot.y);
   }
 
   function dropFood(x, y, count) {
@@ -734,6 +737,7 @@ var Sim = (function () {
     worldTime: function () { return worldTime; },
     worldInfo: function () { return { seed: worldSeed, flavor: worldFlavor }; },
     setViewCenter: function (fn) { viewCenter = fn; },
+    setFocus: function (fn) { focusFn = fn; },
     unlockAll: unlockAll,
     progress: function () {
       var cfg = unlocksCfg();
