@@ -2,7 +2,7 @@
 
 var UI = (function () {
 
-  var BUGLAB_VERSION = "18";
+  var BUGLAB_VERSION = "19";
 
   var parentA = null;   // selected species for slot A
   var parentB = null;
@@ -418,9 +418,40 @@ var UI = (function () {
   // ---------- the secret designer panel ----------
   var SLIDERS = ["simSpeed", "mutationRate", "foodRate", "bugSpeedMult", "maxBugs"];
 
+  function buildDiagnostics() {
+    var save = "";
+    try { save = localStorage.getItem("buglab-save-v1") || ""; } catch (e) {}
+    var p = {};
+    try { p = Sim.progress(); } catch (e) {}
+    return {
+      version: BUGLAB_VERSION,
+      cacheMeta: !!document.querySelector('meta[http-equiv="Cache-Control"]'),
+      world: Sim.W() + "x" + Sim.H(),
+      bugs: Sim.bugCount(),
+      species: Sim.speciesList().length,
+      bestSpecies: p.species,
+      makerUnlocked: p.makerUnlocked,
+      saveKB: Math.round(save.length / 1024),
+      lastError: window.__buglabErr || "none",
+    };
+  }
+
   function initDesigner() {
     var vEl = document.getElementById("buildVersion");
     if (vEl) vEl.textContent = BUGLAB_VERSION;
+
+    document.getElementById("diagBtn").addEventListener("click", function () {
+      var txt = "BugLab diag " + JSON.stringify(buildDiagnostics());
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(
+          function () { toast("Diagnostics copied! Paste them to send. 🔬"); },
+          function () { window.prompt("Copy this and send it:", txt); }
+        );
+      } else {
+        window.prompt("Copy this and send it:", txt);
+      }
+    });
+
     SLIDERS.forEach(function (key) {
       var slider = document.getElementById("s-" + key);
       var label = document.getElementById("v-" + key);
@@ -987,6 +1018,14 @@ var UI = (function () {
   function init() {
     toastEl = document.getElementById("toast");
     Sim.setToast(toast);
+
+    // remember the most recent script error, so diagnostics can report it
+    window.__buglabErr = null;
+    window.addEventListener("error", function (e) {
+      window.__buglabErr = (e.message || "error") + " @" +
+        String(e.filename || "").split("/").pop() + ":" + (e.lineno || "?");
+    });
+    window.BUGLAB_VERSION = BUGLAB_VERSION; // readable from the console too
 
     document.querySelectorAll(".tab").forEach(function (tab) {
       tab.addEventListener("click", function () {
