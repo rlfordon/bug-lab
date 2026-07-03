@@ -513,8 +513,21 @@ var UI = (function () {
   };
   var makerMode = "genes"; // or "draw"
   var drawCanvas, drawCtx, drawColor = "#3b2a1a", brushSize = 10, erasing = false;
-  var drawUndo = [];
+  var drawUndo = [];       // snapshots of { img, parts }
+  var stampedParts = [];   // live legs & feelers — they wiggle!
+  var tempPart = null;     // the part being dragged out right now
   var previewT = 0;
+
+  function renderPartsOverlay(t) {
+    var ov = document.getElementById("partsOverlay");
+    var octx = ov.getContext("2d");
+    octx.clearRect(0, 0, ov.width, ov.height);
+    octx.save();
+    octx.translate(120, 120);
+    var list = tempPart ? stampedParts.concat([tempPart]) : stampedParts;
+    Render.drawParts(octx, list, t || 0, 1);
+    octx.restore();
+  }
 
   var LOOK_CONTROLS = [
     { key: "segments", label: "Body parts", options: [1, 2, 3] },
@@ -625,7 +638,6 @@ var UI = (function () {
       drawCtx.save();
       drawCtx.translate(c.x, c.y);
 
-      // bug parts draw themselves completely
       if (tool === "eye") {
         // a googly eye whose pupil looks where you dragged
         drawCtx.fillStyle = "#ffffff";
@@ -642,35 +654,6 @@ var UI = (function () {
         drawCtx.restore();
         return;
       }
-      if (tool === "leg") {
-        // a bent leg: press at the body, drag to where the foot goes
-        drawCtx.strokeStyle = drawColor;
-        drawCtx.lineWidth = Math.max(4, r * 0.14);
-        drawCtx.lineCap = "round";
-        drawCtx.beginPath();
-        drawCtx.moveTo(0, 0);
-        drawCtx.quadraticCurveTo(dx * 0.5 - dy * 0.25, dy * 0.5 + dx * 0.25, dx, dy);
-        drawCtx.stroke();
-        drawCtx.restore();
-        return;
-      }
-      if (tool === "antenna") {
-        // a curvy feeler with a little ball on the tip
-        drawCtx.strokeStyle = drawColor;
-        drawCtx.lineWidth = Math.max(3, r * 0.08);
-        drawCtx.lineCap = "round";
-        drawCtx.beginPath();
-        drawCtx.moveTo(0, 0);
-        drawCtx.quadraticCurveTo(dx * 0.5 - dy * 0.35, dy * 0.5 + dx * 0.35, dx, dy);
-        drawCtx.stroke();
-        drawCtx.fillStyle = drawColor;
-        drawCtx.beginPath();
-        drawCtx.arc(dx, dy, Math.max(4, r * 0.12), 0, Math.PI * 2);
-        drawCtx.fill();
-        drawCtx.restore();
-        return;
-      }
-
       if (tool === "oval" || tool === "triangle" || tool === "star") drawCtx.rotate(ang);
       drawCtx.fillStyle = drawColor;
       drawCtx.strokeStyle = "rgba(0,0,0,0.18)";
@@ -722,11 +705,18 @@ var UI = (function () {
       ev.preventDefault();
       sketching = true;
       try { drawCanvas.setPointerCapture(ev.pointerId); } catch (err) {}
-      drawUndo.push(drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
+      drawUndo.push({
+        img: drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height),
+        parts: stampedParts.slice(),
+      });
       if (drawUndo.length > 25) drawUndo.shift();
       lastPt = drawPointFromEvent(ev);
       if (tool === "brush") {
         stroke(lastPt);
+      } else if (tool === "leg" || tool === "antenna") {
+        shapeCenter = lastPt;
+        tempPart = makePart(shapeCenter, lastPt);
+        renderPartsOverlay(previewT);
       } else {
         shapeCenter = lastPt;
         shapeBase = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
@@ -738,6 +728,9 @@ var UI = (function () {
       var p = drawPointFromEvent(ev);
       if (tool === "brush") {
         stroke(p);
+      } else if (tempPart) {
+        tempPart = makePart(shapeCenter, p); // live-resize the part
+        renderPartsOverlay(previewT);
       } else {
         drawCtx.putImageData(shapeBase, 0, 0); // live-resize the stamp
         stampShape(shapeCenter, p);
@@ -745,10 +738,26 @@ var UI = (function () {
     });
     ["pointerup", "pointercancel", "pointerleave"].forEach(function (evt) {
       drawCanvas.addEventListener(evt, function () {
+        if (tempPart && sketching) {
+          stampedParts.push(tempPart);
+          tempPart = null;
+          renderPartsOverlay(previewT);
+        }
         sketching = false;
         shapeBase = null;
       });
     });
+
+    function makePart(c, p) {
+      var r = Math.max(8, Math.hypot(p.x - c.x, p.y - c.y));
+      return {
+        type: tool,
+        x: c.x - 120, y: c.y - 120,   // stored relative to the drawing's center
+        dx: p.x - c.x, dy: p.y - c.y,
+        color: drawColor,
+        w: tool === "leg" ? Math.max(4, r * 0.14) : Math.max(3, r * 0.08),
+      };
+    }
 
     // shape stamp buttons
     function clearShapeActive() {
@@ -797,15 +806,25 @@ var UI = (function () {
       });
     });
     document.getElementById("undoBtn").addEventListener("click", function () {
-      if (drawUndo.length) drawCtx.putImageData(drawUndo.pop(), 0, 0);
+      if (!drawUndo.length) return;
+      var snap = drawUndo.pop();
+      drawCtx.putImageData(snap.img, 0, 0);
+      stampedParts = snap.parts;
+      renderPartsOverlay(previewT);
     });
     document.getElementById("clearBtn").addEventListener("click", function () {
-      drawUndo.push(drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
+      drawUndo.push({
+        img: drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height),
+        parts: stampedParts.slice(),
+      });
       drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+      stampedParts = [];
+      renderPartsOverlay(previewT);
     });
   }
 
   function drawingHasInk() {
+    if (stampedParts.length) return true;
     var data = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height).data;
     for (var i = 3; i < data.length; i += 32) {
       if (data[i] > 0) return true;
@@ -822,7 +841,11 @@ var UI = (function () {
     ctx.translate(c.width / 2, c.height / 2);
     if (makerMode === "draw") {
       ctx.rotate(Math.sin(previewT * 4) * 0.06);
-      ctx.drawImage(drawCanvas, -c.width * 0.42, -c.height * 0.42, c.width * 0.84, c.height * 0.84);
+      var ps = (c.width * 0.84) / 240;
+      ctx.scale(ps, ps);
+      var list = tempPart ? stampedParts.concat([tempPart]) : stampedParts;
+      Render.drawParts(ctx, list, previewT, makerGenes.speed);
+      ctx.drawImage(drawCanvas, -120, -120, 240, 240);
     } else {
       var scale = (c.width / 110) / Math.max(0.8, makerGenes.size * 0.9);
       ctx.scale(scale, scale);
@@ -854,7 +877,10 @@ var UI = (function () {
     var flavor = document.getElementById("makerFlavor").value.trim() || Genes.pick(FLAVOR_LINES);
     var sp = Sim.addSpecies(name, flavor, JSON.parse(JSON.stringify(makerGenes)), false, false);
     sp.made = true;
-    if (makerMode === "draw") sp.art = drawCanvas.toDataURL("image/png");
+    if (makerMode === "draw") {
+      sp.art = drawCanvas.toDataURL("image/png");
+      if (stampedParts.length) sp.parts = JSON.parse(JSON.stringify(stampedParts));
+    }
     Sim.releaseSpecies(sp.id, 3);
     Sim.save();
     toast("Three little " + sp.name + "s scurry into the garden! 🎉");
@@ -878,6 +904,7 @@ var UI = (function () {
       if (document.getElementById("screen-maker").classList.contains("active")) {
         previewT += 0.09;
         renderMakerPreview();
+        if (makerMode === "draw") renderPartsOverlay(previewT); // legs wiggle while you draw!
       }
     }, 90);
   }

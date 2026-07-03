@@ -541,6 +541,7 @@ main { display: flex; justify-content: center; padding: 14px; }
 }
 
 .draw-wrap {
+  position: relative;
   background:
     linear-gradient(45deg, #eef7e2 25%, transparent 25%, transparent 75%, #eef7e2 75%),
     linear-gradient(45deg, #eef7e2 25%, #f9fdf2 25%, #f9fdf2 75%, #eef7e2 75%);
@@ -552,6 +553,12 @@ main { display: flex; justify-content: center; padding: 14px; }
   line-height: 0;
 }
 #drawCanvas { cursor: crosshair; touch-action: none; }
+#partsOverlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
 #palette { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin: 8px 0 4px; }
 .swatch {
   width: 26px;

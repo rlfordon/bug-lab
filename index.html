@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bug Lab 🐛</title>
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 
@@ -93,6 +93,7 @@
           <div id="drawControls" class="hidden">
             <div class="draw-wrap">
               <canvas id="drawCanvas" width="240" height="240"></canvas>
+              <canvas id="partsOverlay" width="240" height="240"></canvas>
             </div>
             <div id="palette"></div>
             <div class="draw-tools">
@@ -189,11 +190,11 @@
 
 <!-- Kid-editable data first, then the engine -->
 <!-- (?v= numbers stop the browser mixing old and new copies — bump them together) -->
-<script src="bugs.js?v=11"></script>
-<script src="js/genes.js?v=11"></script>
-<script src="js/render.js?v=11"></script>
-<script src="js/sim.js?v=11"></script>
-<script src="js/ui.js?v=11"></script>
-<script src="js/main.js?v=11"></script>
+<script src="bugs.js?v=12"></script>
+<script src="js/genes.js?v=12"></script>
+<script src="js/render.js?v=12"></script>
+<script src="js/sim.js?v=12"></script>
+<script src="js/ui.js?v=12"></script>
+<script src="js/main.js?v=12"></script>
 </body>
 </html>

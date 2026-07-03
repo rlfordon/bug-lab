@@ -213,13 +213,56 @@ var Render = (function () {
     return img;
   }
 
+  // stamped legs & feelers stay alive: they wiggle just like real bug parts.
+  // parts live in drawing-space (240x240, centered on 0,0); callers scale first.
+  function drawParts(ctx, parts, t, speed) {
+    if (!parts) return;
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      var dx = p.dx, dy = p.dy;
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.w;
+      ctx.lineCap = "round";
+      if (p.type === "leg") {
+        // the whole leg swings around its hip, like walking
+        var swing = Math.sin(t * 10 * (speed || 1) + i * 2.1) * 0.3;
+        var cs = Math.cos(swing), sn = Math.sin(swing);
+        var rx = dx * cs - dy * sn, ry = dx * sn + dy * cs;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(rx * 0.5 - ry * 0.25, ry * 0.5 + rx * 0.25, rx, ry);
+        ctx.stroke();
+      } else { // antenna: a gentle sway
+        var wob = Math.sin(t * 6 + i * 3) * 0.15;
+        var cw = Math.cos(wob), sw = Math.sin(wob);
+        var ax = dx * cw - dy * sw, ay = dx * sw + dy * cw;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(ax * 0.5 - ay * 0.35, ay * 0.5 + ax * 0.35, ax, ay);
+        ctx.stroke();
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(ax, ay, Math.max(4, Math.hypot(ax, ay) * 0.12), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
   // caller has already translated/rotated to the bug's position & heading
   function drawArtBug(ctx, sp, t) {
     var img = artImage(sp);
     if (!img.complete || !img.naturalWidth) return;
     var w = 52 * sp.genes.size;
+    var s = w / 240;
     ctx.save();
     ctx.rotate(Math.sin(t * 9) * 0.07); // a happy little waddle
+    ctx.save();
+    ctx.scale(s, s);
+    drawParts(ctx, sp.parts, t, sp.genes.speed); // legs first, body on top
+    ctx.restore();
     ctx.drawImage(img, -w / 2, -w / 2, w, w);
     ctx.restore();
   }
@@ -231,7 +274,13 @@ var Render = (function () {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       var img = artImage(sp);
       var paint = function () {
-        ctx.drawImage(img, canvas.width * 0.08, canvas.height * 0.08, canvas.width * 0.84, canvas.height * 0.84);
+        var s = (canvas.width * 0.84) / 240;
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.scale(s, s);
+        drawParts(ctx, sp.parts, 0, 1);
+        ctx.drawImage(img, -120, -120, 240, 240);
+        ctx.restore();
       };
       if (img.complete && img.naturalWidth) paint();
       else img.addEventListener("load", paint, { once: true });
@@ -685,6 +734,7 @@ var Render = (function () {
     drawPortrait: drawPortrait,
     drawPortraitFor: drawPortraitFor,
     drawArtBug: drawArtBug,
+    drawParts: drawParts,
     drawSilhouette: drawSilhouette,
     drawSparkles: drawSparkles,
     drawBackground: drawBackground,
