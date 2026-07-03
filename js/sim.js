@@ -42,7 +42,7 @@ var Sim = (function () {
     var u = typeof UNLOCKS !== "undefined" ? UNLOCKS : {};
     return {
       bigWorld: u.bigWorld || 8,
-      maker: u.maker || 10,
+      maker: u.maker || 40,
       flavors: u.flavors || { meadow: 0, forest: 12, desert: 16, snow: 20, wild: 25 },
     };
   }
