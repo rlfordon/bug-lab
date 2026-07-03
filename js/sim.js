@@ -131,8 +131,15 @@ var Sim = (function () {
   function cohesionFor(g) {
     var c = Math.max(0.12, Math.min(1.4, 1.7 - g.size)); // size is the big lever
     c *= g.shy ? 1.3 : 0.8;
-    c *= g.diet === "bugs" ? 0.85 : 1.0;
+    // little hunters are pack animals (wolves, ants); big hunters are lone apexes
+    if (g.diet === "bugs") c *= g.size <= 1.0 ? 1.5 : 0.5;
     return Math.max(0, Math.min(1.8, c));
+  }
+
+  // the biggest a bug could ever "fight" with a full pack behind it
+  function maxEffSize(genes) {
+    var c = teamCfg();
+    return genes.size * (1 + c.maxMates * c.strength);
   }
 
   function flowerIndexNear(x, y) {
@@ -353,6 +360,40 @@ var Sim = (function () {
       pb.kin = near > 0 ? { x: sumX / near, y: sumY / near } : null;
     }
 
+    // PACK TAKEDOWNS: whenever enough hunters cluster around a bug, they bring
+    // it down together and share the meal (so the pack doesn't starve mid-hunt).
+    // Lone hunters still make their own kills below; this is the teamwork path.
+    var SURROUND = 48;
+    for (var vk = bugs.length - 1; vk >= 0; vk--) {
+      var victim = bugs[vk];
+      var vg = getSpecies(victim.speciesId).genes;
+      var attackers = [], power = 0;
+      for (var at = 0; at < bugs.length; at++) {
+        var atk = bugs[at];
+        if (atk === victim || atk.speciesId === victim.speciesId) continue;
+        var ag = getSpecies(atk.speciesId).genes;
+        if (ag.diet !== "bugs" || atk.rest > 0) continue;       // only ready hunters attack
+        if (vg.diet === "bugs" && vg.size >= ag.size) continue; // can't gang up a bigger hunter
+        if (Math.hypot(atk.x - victim.x, atk.y - victim.y) < SURROUND) { attackers.push(atk); power += ag.size; }
+      }
+      // it takes a real gang, and more if the victim's own swarm defends it
+      if (attackers.length >= 2 && power > effSize(victim, vg) * 1.5) {
+        // a big catch is a real feast — the whole pack eats well
+        var share = Math.min(75, 45 + vg.size * 22);
+        for (var ai = 0; ai < attackers.length; ai++) {
+          var a = attackers[ai];
+          a.energy = Math.min(100, a.energy + share);
+          a.meals = (a.meals || 0) + 1;
+          statFor(a.speciesId).meals++;
+        }
+        attackers[0].rest = 3;
+        statFor(victim.speciesId).eaten++;
+        kills++;
+        poofs.push({ x: victim.x, y: victim.y, t: 0 });
+        bugs.splice(vk, 1);
+      }
+    }
+
     // each bug thinks and moves
     for (var i = bugs.length - 1; i >= 0; i--) {
       var bug = bugs[i];
@@ -424,7 +465,7 @@ var Sim = (function () {
           var struck = null, strikeD = 32;
           for (var k = 0; k < bugs.length; k++) {
             var cand = bugs[k];
-            if (cand === bug) continue;
+            if (cand === bug || cand.speciesId === bug.speciesId) continue; // never eat your own kind
             var cg = getSpecies(cand.speciesId).genes;
             if (effSize(cand, cg) < effSize(bug, g) * 0.85) {
               var pd = Math.hypot(cand.x - bug.x, cand.y - bug.y);
@@ -434,24 +475,56 @@ var Sim = (function () {
           if (struck) { eat(struck); if (bugs.indexOf(bug) < 0) continue; frozen = true; }
           else if (bug.energy > 30) frozen = true; // keep lurking unless starving
         } else {
-          // open-ground chase — teamwork cuts both ways: a hunter pack fights
-          // big, while a prey swarm grows too "big" to be caught
-          var prey = null, preyDist = biome === "forest" ? 95 : 320;
+          // open-ground: chase the nearest bug my CURRENT pack can bring down
+          var myPack = bug.pack || 0;
+          var target = null, tDist = biome === "forest" ? 95 : 320;
           for (var k2 = 0; k2 < bugs.length; k2++) {
             var c2 = bugs[k2];
-            if (c2 === bug || c2.hidden) continue;
+            if (c2 === bug || c2.hidden || c2.speciesId === bug.speciesId) continue;
             var cg2 = getSpecies(c2.speciesId).genes;
-            if (effSize(c2, cg2) < effSize(bug, g) * 0.85) {
+            if (cg2.diet === "bugs" && cg2.size >= g.size) continue; // not a bigger hunter
+            if (effSize(c2, cg2) < effSize(bug, g) * 0.85) { // what my pack can handle now
               var pd2 = Math.hypot(c2.x - bug.x, c2.y - bug.y);
-              if (pd2 < preyDist) { preyDist = pd2; prey = c2; }
+              if (pd2 < tDist) { tDist = pd2; target = c2; }
             }
           }
-          if (prey) {
-            targetAngle = Math.atan2(prey.y - bug.y, prey.x - bug.x);
-            urgency = preyDist < 70 ? 2.0 : 1.2; // POUNCE up close
-            if (preyDist < 12 * g.size) { eat(prey); if (bugs.indexOf(bug) < 0) continue; }
-          } else if (g.size <= HIDE_SIZE && bug.energy > 40) {
-            // no prey around: a tiny hunter slips off to a flower to ambush from
+          // already running with a buddy? go after big game the group could take
+          if (!target && myPack >= 1) {
+            var bDist = biome === "forest" ? 130 : 340;
+            for (var kb = 0; kb < bugs.length; kb++) {
+              var cb = bugs[kb];
+              if (cb === bug || cb.hidden || cb.speciesId === bug.speciesId) continue;
+              var cbg = getSpecies(cb.speciesId).genes;
+              if (cbg.diet === "bugs" && cbg.size >= g.size) continue;
+              if (effSize(cb, cbg) < maxEffSize(g) * 0.85) {
+                var bd = Math.hypot(cb.x - bug.x, cb.y - bug.y);
+                if (bd < bDist) { bDist = bd; target = cb; tDist = bd; }
+              }
+            }
+          }
+          if (target) {
+            targetAngle = Math.atan2(target.y - bug.y, target.x - bug.x);
+            urgency = tDist < 80 ? 1.9 : 1.3; // charge in together
+            // OVERWHELM: a loose ring of packmates brings prey down together,
+            // so nobody needs a pinpoint hit
+            var SURROUND = 46;
+            if (tDist < SURROUND) {
+              var attackers = 0;
+              for (var ka = 0; ka < bugs.length; ka++) {
+                var ca = bugs[ka];
+                if (ca.speciesId === bug.speciesId &&
+                    Math.hypot(ca.x - target.x, ca.y - target.y) < SURROUND) attackers++;
+              }
+              var tg = getSpecies(target.speciesId).genes;
+              var packPow = g.size * (1 + Math.min(attackers - 1, teamCfg().maxMates) * teamCfg().strength);
+              if (effSize(target, tg) < packPow * 0.85) { eat(target); if (bugs.indexOf(bug) < 0) continue; }
+            }
+          } else if (bug.kin && bug.energy > 52 && Math.hypot(bug.kin.x - bug.x, bug.kin.y - bug.y) > 40) {
+            // no prey I can take alone — rejoin my packmates to form a hunting party
+            targetAngle = Math.atan2(bug.kin.y - bug.y, bug.kin.x - bug.x);
+            urgency = 1.1;
+          } else if (g.size <= HIDE_SIZE && bug.energy > 55) {
+            // well-fed tiny hunter with no pack: lurk in a flower to ambush
             var lair = null, lairD = 260;
             for (var fq = 0; fq < hideSpots.length; fq++) {
               if (hiderCounts[fq] >= HIDE_CAP) continue;
@@ -491,6 +564,15 @@ var Sim = (function () {
         // turn toward the target smoothly
         var diff = Math.atan2(Math.sin(targetAngle - bug.angle), Math.cos(targetAngle - bug.angle));
         bug.angle += diff * Math.min(1, dt * 6);
+        // social bugs keep loosely together even while busy foraging
+        if (bug.kin && urgency < 1.6) {
+          var cohb = cohesionFor(g);
+          if (cohb > 0.4) {
+            var tk = Math.atan2(bug.kin.y - bug.y, bug.kin.x - bug.x);
+            var kdb = Math.atan2(Math.sin(tk - bug.angle), Math.cos(tk - bug.angle));
+            bug.angle += kdb * Math.min(0.5, dt * 0.5 * cohb);
+          }
+        }
       } else if (bug.kin && cohesionFor(g) > 0.15) {
         // wandering, but drift toward kin — tight schoolers pull hard and
         // wander little; loners barely notice their neighbors
@@ -540,11 +622,14 @@ var Sim = (function () {
 
       // well-fed bugs lay an egg — but not if their own family
       // is already crowding the garden (no species gets to hog it all)
-      // hunters stay rare, like real ecosystems
       var popCap = worldMaxBugs();
-      var familyCap = g.diet === "bugs"
-        ? Math.max(2, popCap * 0.08)
-        : Math.max(6, popCap * 0.25);
+      var familyCap;
+      if (g.diet === "bugs") {
+        // little pack-hunters need numbers to work; big apex hunters stay rare
+        familyCap = g.size <= 1.0 ? Math.max(8, popCap * 0.3) : Math.max(2, popCap * 0.08);
+      } else {
+        familyCap = Math.max(6, popCap * 0.25);
+      }
       // hunters lay after a good meal; grazers need a real energy surplus
       var eggAt = g.diet === "bugs" ? 75 : 85;
       if (bug.energy > eggAt && bug.eggCd <= 0 &&

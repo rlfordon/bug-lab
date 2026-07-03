@@ -33,8 +33,8 @@ var SETTINGS = {
 //    maxMates:   teamwork stops helping past this many buddies
 // ----------------------------------------------------------------
 var TEAMWORK = {
-  packRadius: 78,
-  strength: 0.28,
+  packRadius: 82,
+  strength: 0.42,
   maxMates: 4,
 };
 
