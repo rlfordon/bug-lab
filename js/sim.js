@@ -107,6 +107,33 @@ var Sim = (function () {
   var HIDE_SIZE = 1.15;    // how small you must be to fit under a flower
   var HIDE_RADIUS = 26;    // how close to the flower counts as "hidden"
   var HIDE_CAP = 2;        // a flower only has room for 2 hiders!
+  var AMBUSH_RADIUS = 60;  // how close prey must wander for a lurker to strike
+
+  // teamwork: a bug in a pack of its own kind "acts bigger"
+  function teamCfg() {
+    var t = typeof TEAMWORK !== "undefined" ? TEAMWORK : {};
+    return { radius: t.packRadius || 78, strength: t.strength || 0.28, maxMates: t.maxMates || 4 };
+  }
+  function packMult(bug) {
+    var c = teamCfg();
+    var helpers = Math.min(Math.max((bug.pack || 0) - 1, 0), c.maxMates);
+    return 1 + helpers * c.strength;
+  }
+  // how big a bug effectively "fights" — its real size boosted by its pack
+  function effSize(bug, genes) {
+    return (genes || getSpecies(bug.speciesId).genes).size * packMult(bug);
+  }
+
+  // how strongly a bug wants to stick with its own kind — a personality:
+  //  • little bugs crave the safety of a group; giants roam alone
+  //  • shy bugs huddle; brave bugs wander off
+  //  • hunters are a touch more independent than leaf-eaters
+  function cohesionFor(g) {
+    var c = Math.max(0.12, Math.min(1.4, 1.7 - g.size)); // size is the big lever
+    c *= g.shy ? 1.3 : 0.8;
+    c *= g.diet === "bugs" ? 0.85 : 1.0;
+    return Math.max(0, Math.min(1.8, c));
+  }
 
   function flowerIndexNear(x, y) {
     var spots = Render.HIDEOUTS();
@@ -307,6 +334,25 @@ var Sim = (function () {
       hiderCounts.push(Math.min(flowerGuests[fj].length, HIDE_CAP));
     }
 
+    // count each bug's nearby buddies (same species) — the pack for teamwork —
+    // and remember the middle of the group, so kin can stick together
+    var teamRadius = teamCfg().radius;
+    var cohereRadius = teamRadius * 1.6;
+    for (var pi = 0; pi < bugs.length; pi++) {
+      var pb = bugs[pi];
+      var mates = 0, sumX = 0, sumY = 0, near = 0;
+      for (var pj = 0; pj < bugs.length; pj++) {
+        if (pj === pi) continue;
+        var ob = bugs[pj];
+        if (ob.speciesId !== pb.speciesId) continue;
+        var dist = Math.hypot(ob.x - pb.x, ob.y - pb.y);
+        if (dist < teamRadius) mates++;
+        if (dist < cohereRadius) { sumX += ob.x; sumY += ob.y; near++; }
+      }
+      pb.pack = mates;
+      pb.kin = near > 0 ? { x: sumX / near, y: sumY / near } : null;
+    }
+
     // each bug thinks and moves
     for (var i = bugs.length - 1; i >= 0; i--) {
       var bug = bugs[i];
@@ -329,7 +375,8 @@ var Sim = (function () {
         var other = bugs[j];
         if (other === bug) continue;
         var og = getSpecies(other.speciesId).genes;
-        if (og.diet === "bugs" && g.size < og.size * 0.85) {
+        // a swarm stands its ground: your pack makes you too big to be prey
+        if (og.diet === "bugs" && effSize(bug, g) < effSize(other, og) * 0.85) {
           var d = Math.hypot(other.x - bug.x, other.y - bug.y);
           if (d < hunterDist) { hunterDist = d; nearestHunter = other; }
         }
@@ -359,34 +406,59 @@ var Sim = (function () {
         }
       }
 
-      // 2) hunters chase snack-sized bugs when hungry (hidden bugs are invisible!)
-      // in the forest, the trees block a hunter's view — prey is much safer there
+      // 2) hunters: lurk-and-ambush if hidden, otherwise chase visible prey
       if (targetAngle === null && !frozen && g.diet === "bugs" && bug.energy < 80 && bug.rest <= 0) {
-        var prey = null, preyDist = biome === "forest" ? 95 : 320;
-        for (var k = 0; k < bugs.length; k++) {
-          var cand = bugs[k];
-          if (cand === bug) continue;
-          var cg = getSpecies(cand.speciesId).genes;
-          if (cg.size < g.size * 0.85 && !cand.hidden) {
-            var pd = Math.hypot(cand.x - bug.x, cand.y - bug.y);
-            if (pd < preyDist) { preyDist = pd; prey = cand; }
+        var eat = function (victim) {
+          bug.energy = Math.min(100, bug.energy + 55);
+          bug.rest = 4; // food coma
+          kills++;
+          bug.meals = (bug.meals || 0) + 1;
+          statFor(bug.speciesId).meals++;
+          statFor(victim.speciesId).eaten++;
+          poofs.push({ x: victim.x, y: victim.y, t: 0 });
+          bugs.splice(bugs.indexOf(victim), 1);
+        };
+        if (bug.hidden) {
+          // AMBUSH! lunge from the flower at anything that strays close —
+          // even a bug hiding in the same bush isn't safe from a lurker
+          var struck = null, strikeD = 32;
+          for (var k = 0; k < bugs.length; k++) {
+            var cand = bugs[k];
+            if (cand === bug) continue;
+            var cg = getSpecies(cand.speciesId).genes;
+            if (effSize(cand, cg) < effSize(bug, g) * 0.85) {
+              var pd = Math.hypot(cand.x - bug.x, cand.y - bug.y);
+              if (pd < strikeD) { strikeD = pd; struck = cand; }
+            }
           }
-        }
-        if (prey) {
-          targetAngle = Math.atan2(prey.y - bug.y, prey.x - bug.x);
-          // POUNCE! hunters get a burst of speed at close range
-          urgency = preyDist < 70 ? 2.0 : 1.2;
-          // chomp!
-          if (preyDist < 12 * g.size) {
-            bug.energy = Math.min(100, bug.energy + 55);
-            bug.rest = 4; // food coma
-            kills++;
-            bug.meals = (bug.meals || 0) + 1;
-            statFor(bug.speciesId).meals++;
-            statFor(prey.speciesId).eaten++;
-            poofs.push({ x: prey.x, y: prey.y, t: 0 });
-            bugs.splice(bugs.indexOf(prey), 1);
-            if (bugs.indexOf(bug) < 0) continue; // safety
+          if (struck) { eat(struck); if (bugs.indexOf(bug) < 0) continue; frozen = true; }
+          else if (bug.energy > 30) frozen = true; // keep lurking unless starving
+        } else {
+          // open-ground chase — teamwork cuts both ways: a hunter pack fights
+          // big, while a prey swarm grows too "big" to be caught
+          var prey = null, preyDist = biome === "forest" ? 95 : 320;
+          for (var k2 = 0; k2 < bugs.length; k2++) {
+            var c2 = bugs[k2];
+            if (c2 === bug || c2.hidden) continue;
+            var cg2 = getSpecies(c2.speciesId).genes;
+            if (effSize(c2, cg2) < effSize(bug, g) * 0.85) {
+              var pd2 = Math.hypot(c2.x - bug.x, c2.y - bug.y);
+              if (pd2 < preyDist) { preyDist = pd2; prey = c2; }
+            }
+          }
+          if (prey) {
+            targetAngle = Math.atan2(prey.y - bug.y, prey.x - bug.x);
+            urgency = preyDist < 70 ? 2.0 : 1.2; // POUNCE up close
+            if (preyDist < 12 * g.size) { eat(prey); if (bugs.indexOf(bug) < 0) continue; }
+          } else if (g.size <= HIDE_SIZE && bug.energy > 40) {
+            // no prey around: a tiny hunter slips off to a flower to ambush from
+            var lair = null, lairD = 260;
+            for (var fq = 0; fq < hideSpots.length; fq++) {
+              if (hiderCounts[fq] >= HIDE_CAP) continue;
+              var ld = Math.hypot(hideSpots[fq].x - bug.x, hideSpots[fq].y - bug.y);
+              if (ld < lairD) { lairD = ld; lair = hideSpots[fq]; }
+            }
+            if (lair) { targetAngle = Math.atan2(lair.y - bug.y, lair.x - bug.x); urgency = 1; }
           }
         }
       }
@@ -419,6 +491,13 @@ var Sim = (function () {
         // turn toward the target smoothly
         var diff = Math.atan2(Math.sin(targetAngle - bug.angle), Math.cos(targetAngle - bug.angle));
         bug.angle += diff * Math.min(1, dt * 6);
+      } else if (bug.kin && cohesionFor(g) > 0.15) {
+        // wandering, but drift toward kin — tight schoolers pull hard and
+        // wander little; loners barely notice their neighbors
+        var coh = cohesionFor(g);
+        var toKin = Math.atan2(bug.kin.y - bug.y, bug.kin.x - bug.x);
+        var kd = Math.atan2(Math.sin(toKin - bug.angle), Math.cos(toKin - bug.angle));
+        bug.angle += kd * Math.min(1, dt * 1.2 * coh) + rnd(-1, 1) * dt * Math.max(0.6, 2.2 - coh * 1.1);
       } else {
         // just wandering
         bug.angle += rnd(-1, 1) * dt * 2.2;

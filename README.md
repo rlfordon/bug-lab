@@ -36,6 +36,11 @@ Designer Panel.
   pick its stats, colors, and parts with sliders and buttons, or switch to
   **✏️ Draw it myself** and hand-draw your bug with a paint canvas. Drawn
   bugs walk around the garden wearing your art.
+- **🤝 Teamwork** — bugs of the same kind that huddle together act *bigger*
+  than they are. A pack of tiny hunters can gang up to take down a giant, and
+  a swarm of little bugs is too much for a predator to eat. Small, shy bugs
+  school tightly; big brave ones roam alone. Tiny predators can even hide in
+  flowers and ambush. Tune it in `bugs.js` (the `TEAMWORK` block).
 - **📖 Journal** — a page for every species ever discovered or invented.
 - **🌟 Legendaries** — six secret bugs with hidden recipes. If a mix produces
   the right combination of genes, it *becomes* the legendary (golden card,

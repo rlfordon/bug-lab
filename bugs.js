@@ -21,6 +21,25 @@ var SETTINGS = {
 
 
 // ----------------------------------------------------------------
+//  🤝 TEAMWORK — bugs of the same kind are stronger in a group!
+//
+//  When buddies of the SAME species huddle close together, they act
+//  BIGGER than they really are. This means:
+//    • a pack of tiny hunters can gang up to take down a huge bug!
+//    • a swarm of little bugs is too much for a predator to eat!
+//
+//    packRadius: how close buddies must be to team up
+//    strength:   how much bigger each extra buddy makes the group act
+//    maxMates:   teamwork stops helping past this many buddies
+// ----------------------------------------------------------------
+var TEAMWORK = {
+  packRadius: 78,
+  strength: 0.28,
+  maxMates: 4,
+};
+
+
+// ----------------------------------------------------------------
 //  🌍 WORLD FLAVORS — what kind of world grows when you press
 //  "Grow a new world". Make your own flavor!
 //

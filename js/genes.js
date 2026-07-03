@@ -96,7 +96,8 @@ var Genes = (function () {
     else if (g.speed <= 0.6) chips.push("🐌 slowpoke");
     if (g.size >= 1.6) chips.push("🐘 giant");
     else if (g.size <= 0.7) chips.push("🐜 teeny");
-    if (g.size <= 1.15 && g.diet === "plants") chips.push("🌸 can hide");
+    if (g.size <= 1.15) chips.push(g.diet === "bugs" ? "🌸 can ambush" : "🌸 can hide");
+    if (g.size <= 1.0) chips.push("🤝 team power");
     if ((g.babies || 1) >= 1.4) chips.push("🥚 eggs everywhere");
     else if ((g.babies || 1) <= 0.7) chips.push("🥚 rare eggs");
     if (g.wings === 2) chips.push("🦋 big wings");

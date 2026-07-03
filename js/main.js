@@ -177,6 +177,7 @@
 
     var status = "";
     if (best.bug.hidden) status = "🤫 hiding";
+    else if ((best.bug.pack || 0) >= 2) status = "🤝 teamed up!";
     else if (best.bug.rest > 0) status = "😴 full and sleepy";
     else if (best.bug.energy < 35) status = "🍽️ very hungry";
     else if (best.bug.energy > 85) status = "💖 ready to lay an egg";
