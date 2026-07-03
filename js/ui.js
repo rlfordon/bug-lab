@@ -2,7 +2,7 @@
 
 var UI = (function () {
 
-  var BUGLAB_VERSION = "17";
+  var BUGLAB_VERSION = "18";
 
   var parentA = null;   // selected species for slot A
   var parentB = null;
@@ -555,6 +555,15 @@ var UI = (function () {
   var PALETTE = ["#3b2a1a", "#e05c5c", "#ff8c42", "#ffd166", "#7ec850", "#2f6b1d",
                  "#5fb8e0", "#3b6fd4", "#b57ee0", "#ff8fb1", "#ffffff", "#9a9a92"];
 
+  // a darker shade of a color, for bold bug-like outlines
+  function darken(hex, f) {
+    var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+    if (!m) return "rgba(0,0,0,0.45)";
+    return "rgb(" + Math.round(parseInt(m[1], 16) * f) + "," +
+      Math.round(parseInt(m[2], 16) * f) + "," +
+      Math.round(parseInt(m[3], 16) * f) + ")";
+  }
+
   function makePickRow(spec) {
     var row = document.createElement("div");
     row.className = "pick-row";
@@ -666,8 +675,10 @@ var UI = (function () {
       }
       if (tool === "oval" || tool === "triangle" || tool === "star" || tool === "rectangle") drawCtx.rotate(ang);
       drawCtx.fillStyle = drawColor;
-      drawCtx.strokeStyle = "rgba(0,0,0,0.18)";
-      drawCtx.lineWidth = 3;
+      // bold dark outline in a darker shade of the fill — like the built-in bugs
+      drawCtx.strokeStyle = darken(drawColor, 0.55);
+      drawCtx.lineWidth = Math.max(4, r * 0.16);
+      drawCtx.lineJoin = "round";
       drawCtx.beginPath();
       if (tool === "circle") {
         drawCtx.arc(0, 0, r, 0, Math.PI * 2);

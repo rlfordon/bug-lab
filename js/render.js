@@ -223,32 +223,35 @@ var Render = (function () {
       ctx.translate(p.x, p.y);
       var dx = p.dx, dy = p.dy;
       ctx.strokeStyle = p.color;
-      ctx.lineWidth = p.w;
       ctx.lineCap = "round";
       if (p.type === "leg") {
+        // proper chunky legs, not thin hairs
+        ctx.lineWidth = Math.max(12, (p.w || 6) * 2);
         // the whole leg swings around its hip, like walking
         var swing = Math.sin(t * 10 * (speed || 1) + i * 2.1) * 0.3;
         var cs = Math.cos(swing), sn = Math.sin(swing);
         var rx = dx * cs - dy * sn, ry = dx * sn + dy * cs;
-        // knees bow AWAY from the bug's body, whichever side the leg is on
-        var bend = ((p.x + rx * 0.5) * -ry + (p.y + ry * 0.5) * rx) >= 0 ? 1 : -1;
+        // bow the knee AWAY from the body — computed from the leg's FIXED
+        // attachment (dx,dy), so it never flips direction while walking
+        var bend = ((p.x + dx * 0.5) * -dy + (p.y + dy * 0.5) * dx) >= 0 ? 1 : -1;
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.quadraticCurveTo(rx * 0.5 - ry * 0.25 * bend, ry * 0.5 + rx * 0.25 * bend, rx, ry);
         ctx.stroke();
       } else { // antenna: a gentle sway
+        ctx.lineWidth = Math.max(7, (p.w || 4) * 1.5);
         var wob = Math.sin(t * 6 + i * 3) * 0.15;
         var cw = Math.cos(wob), sw = Math.sin(wob);
         var ax = dx * cw - dy * sw, ay = dx * sw + dy * cw;
-        // feelers curve outward too
-        var abend = ((p.x + ax * 0.5) * -ay + (p.y + ay * 0.5) * ax) >= 0 ? 1 : -1;
+        // feelers curve outward too, from the fixed base direction
+        var abend = ((p.x + dx * 0.5) * -dy + (p.y + dy * 0.5) * dx) >= 0 ? 1 : -1;
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.quadraticCurveTo(ax * 0.5 - ay * 0.35 * abend, ay * 0.5 + ax * 0.35 * abend, ax, ay);
         ctx.stroke();
         ctx.fillStyle = p.color;
         ctx.beginPath();
-        ctx.arc(ax, ay, Math.max(4, Math.hypot(ax, ay) * 0.12), 0, Math.PI * 2);
+        ctx.arc(ax, ay, Math.max(6, Math.hypot(ax, ay) * 0.14), 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
