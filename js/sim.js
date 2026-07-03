@@ -157,8 +157,23 @@ var Sim = (function () {
     return bug;
   }
 
-  function releaseSpecies(speciesId, count) {
-    var spot = randomSpot(true); // arrive somewhere green, not knee-deep in snow
+  var viewCenter = null; // main.js tells us where the player is looking
+
+  // released bugs should arrive where the player can SEE them
+  function releaseSpot() {
+    if (viewCenter) {
+      var c = viewCenter();
+      for (var tries = 0; tries < 20; tries++) {
+        var x = Math.max(40, Math.min(W - 40, c.x + rnd(-160, 160)));
+        var y = Math.max(40, Math.min(H - 40, c.y + rnd(-110, 110)));
+        if (!Render.inAnyPond(x, y, 30)) return { x: x, y: y };
+      }
+    }
+    return randomSpot(true);
+  }
+
+  function releaseSpecies(speciesId, count, spreadOut) {
+    var spot = spreadOut ? randomSpot(true) : releaseSpot();
     for (var i = 0; i < count; i++) {
       var bug = spawnBug(speciesId, spot.x + rnd(-30, 30), spot.y + rnd(-30, 30));
       if (bug) bug.energy = 85; // released bugs arrive well-fed and ready to settle in
@@ -489,29 +504,47 @@ var Sim = (function () {
   var SAVE_KEY = "buglab-save-v1";
   var BACKUP_KEY = "buglab-backup-v1";
 
+  var warnedSaveFull = false;
+
   function save() {
+    var payload = JSON.stringify({
+      nextSpeciesId: nextSpeciesId,
+      worldSeed: worldSeed,
+      worldFlavor: worldFlavor,
+      bestSpecies: bestSpecies,
+      worldTime: Math.round(worldTime),
+      stats: stats,
+      species: species,
+      bugs: bugs.map(function (b) {
+        return { speciesId: b.speciesId, x: b.x, y: b.y, energy: b.energy, age: b.age };
+      }),
+      eggs: eggs,
+    });
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify({
-        nextSpeciesId: nextSpeciesId,
-        worldSeed: worldSeed,
-        worldFlavor: worldFlavor,
-        bestSpecies: bestSpecies,
-        worldTime: Math.round(worldTime),
-        stats: stats,
-        species: species,
-        bugs: bugs.map(function (b) {
-          return { speciesId: b.speciesId, x: b.x, y: b.y, energy: b.energy, age: b.age };
-        }),
-        eggs: eggs,
-      }));
-    } catch (err) { /* saving is a nice-to-have */ }
+      localStorage.setItem(SAVE_KEY, payload);
+    } catch (err) {
+      // browser storage is full (lots of drawn bugs!) — drop the backup copy and retry
+      try {
+        localStorage.removeItem(BACKUP_KEY);
+        localStorage.setItem(SAVE_KEY, payload);
+        if (!warnedSaveFull) {
+          warnedSaveFull = true;
+          toast("Your world is getting BIG! Save it to a file (secret panel → 💾) to be safe.");
+        }
+      } catch (err2) {
+        if (!warnedSaveFull) {
+          warnedSaveFull = true;
+          toast("⚠️ Couldn't save — the world is too big for the browser! Set some bugs free.");
+        }
+      }
+    }
   }
 
   function spawnStarters() {
     for (var i = 0; i < species.length; i++) {
       var sp = species[i];
       if (!sp.starter) continue;
-      releaseSpecies(sp.id, sp.genes.diet === "bugs" ? 2 : 4);
+      releaseSpecies(sp.id, sp.genes.diet === "bugs" ? 2 : 4, true); // spread across the world
     }
     var starterFood = Math.round(45 * areaScale());
     for (var f = 0; f < starterFood; f++) {
@@ -568,7 +601,7 @@ var Sim = (function () {
       var known = species.some(function (sp) { return sp.starter && sp.name === s.name; });
       if (!known) {
         var sp2 = addSpecies(s.name, s.flavor, s.genes, true);
-        releaseSpecies(sp2.id, s.genes.diet === "bugs" ? 2 : 4);
+        releaseSpecies(sp2.id, s.genes.diet === "bugs" ? 2 : 4, true);
       } else {
         // keep starter genes in sync with bugs.js so edits show up
         for (var q = 0; q < species.length; q++) {
@@ -682,6 +715,7 @@ var Sim = (function () {
     stats: function () { return stats; },
     worldTime: function () { return worldTime; },
     worldInfo: function () { return { seed: worldSeed, flavor: worldFlavor }; },
+    setViewCenter: function (fn) { viewCenter = fn; },
     progress: function () {
       var cfg = unlocksCfg();
       return {

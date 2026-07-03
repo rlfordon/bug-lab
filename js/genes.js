@@ -81,7 +81,12 @@ var Genes = (function () {
       name = name.charAt(0).toUpperCase() + name.slice(1);
       if (existingNames.indexOf(name) === -1) return name;
     }
-    return pick(NAME_STARTS) + pick(NAME_ENDS) + " " + (2 + Math.floor(Math.random() * 98));
+    // crowded name book: number them until one is free (always succeeds)
+    var base = pick(NAME_STARTS) + pick(NAME_ENDS);
+    base = base.charAt(0).toUpperCase() + base.slice(1);
+    var n = 2;
+    while (existingNames.indexOf(base + " " + n) !== -1) n++;
+    return base + " " + n;
   }
 
   // Short trait words for the little chips on cards

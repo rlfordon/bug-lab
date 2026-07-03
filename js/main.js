@@ -21,6 +21,11 @@
   // is there more world than the screen can show?
   function worldIsBig() { return Sim.W() > VIEW_W || Sim.H() > VIEW_H; }
 
+  // released bugs arrive where the player is looking
+  Sim.setViewCenter(function () {
+    return { x: cam.x + VIEW_W / 2, y: cam.y + VIEW_H / 2 };
+  });
+
   function canvasPoint(ev) {
     var rect = canvas.getBoundingClientRect();
     return {

@@ -230,17 +230,21 @@ var Render = (function () {
         var swing = Math.sin(t * 10 * (speed || 1) + i * 2.1) * 0.3;
         var cs = Math.cos(swing), sn = Math.sin(swing);
         var rx = dx * cs - dy * sn, ry = dx * sn + dy * cs;
+        // knees bow AWAY from the bug's body, whichever side the leg is on
+        var bend = ((p.x + rx * 0.5) * -ry + (p.y + ry * 0.5) * rx) >= 0 ? 1 : -1;
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.quadraticCurveTo(rx * 0.5 - ry * 0.25, ry * 0.5 + rx * 0.25, rx, ry);
+        ctx.quadraticCurveTo(rx * 0.5 - ry * 0.25 * bend, ry * 0.5 + rx * 0.25 * bend, rx, ry);
         ctx.stroke();
       } else { // antenna: a gentle sway
         var wob = Math.sin(t * 6 + i * 3) * 0.15;
         var cw = Math.cos(wob), sw = Math.sin(wob);
         var ax = dx * cw - dy * sw, ay = dx * sw + dy * cw;
+        // feelers curve outward too
+        var abend = ((p.x + ax * 0.5) * -ay + (p.y + ay * 0.5) * ax) >= 0 ? 1 : -1;
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.quadraticCurveTo(ax * 0.5 - ay * 0.35, ay * 0.5 + ax * 0.35, ax, ay);
+        ctx.quadraticCurveTo(ax * 0.5 - ay * 0.35 * abend, ay * 0.5 + ax * 0.35 * abend, ax, ay);
         ctx.stroke();
         ctx.fillStyle = p.color;
         ctx.beginPath();
