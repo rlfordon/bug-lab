@@ -624,6 +624,53 @@ var UI = (function () {
       var ang = Math.atan2(dy, dx);
       drawCtx.save();
       drawCtx.translate(c.x, c.y);
+
+      // bug parts draw themselves completely
+      if (tool === "eye") {
+        // a googly eye whose pupil looks where you dragged
+        drawCtx.fillStyle = "#ffffff";
+        drawCtx.strokeStyle = "#3b2a1a";
+        drawCtx.lineWidth = Math.max(2, r * 0.14);
+        drawCtx.beginPath();
+        drawCtx.arc(0, 0, r, 0, Math.PI * 2);
+        drawCtx.fill();
+        drawCtx.stroke();
+        drawCtx.fillStyle = "#222222";
+        drawCtx.beginPath();
+        drawCtx.arc(Math.cos(ang) * r * 0.35, Math.sin(ang) * r * 0.35, r * 0.45, 0, Math.PI * 2);
+        drawCtx.fill();
+        drawCtx.restore();
+        return;
+      }
+      if (tool === "leg") {
+        // a bent leg: press at the body, drag to where the foot goes
+        drawCtx.strokeStyle = drawColor;
+        drawCtx.lineWidth = Math.max(4, r * 0.14);
+        drawCtx.lineCap = "round";
+        drawCtx.beginPath();
+        drawCtx.moveTo(0, 0);
+        drawCtx.quadraticCurveTo(dx * 0.5 - dy * 0.25, dy * 0.5 + dx * 0.25, dx, dy);
+        drawCtx.stroke();
+        drawCtx.restore();
+        return;
+      }
+      if (tool === "antenna") {
+        // a curvy feeler with a little ball on the tip
+        drawCtx.strokeStyle = drawColor;
+        drawCtx.lineWidth = Math.max(3, r * 0.08);
+        drawCtx.lineCap = "round";
+        drawCtx.beginPath();
+        drawCtx.moveTo(0, 0);
+        drawCtx.quadraticCurveTo(dx * 0.5 - dy * 0.35, dy * 0.5 + dx * 0.35, dx, dy);
+        drawCtx.stroke();
+        drawCtx.fillStyle = drawColor;
+        drawCtx.beginPath();
+        drawCtx.arc(dx, dy, Math.max(4, r * 0.12), 0, Math.PI * 2);
+        drawCtx.fill();
+        drawCtx.restore();
+        return;
+      }
+
       if (tool === "oval" || tool === "triangle" || tool === "star") drawCtx.rotate(ang);
       drawCtx.fillStyle = drawColor;
       drawCtx.strokeStyle = "rgba(0,0,0,0.18)";
