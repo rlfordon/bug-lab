@@ -108,6 +108,7 @@ var Sim = (function () {
   var HIDE_RADIUS = 26;    // how close to the flower counts as "hidden"
   var HIDE_CAP = 2;        // a flower only has room for 2 hiders!
   var AMBUSH_RADIUS = 60;  // how close prey must wander for a lurker to strike
+  var BABY_GRACE = 5;      // seconds a newborn is too little to be eaten
 
   // teamwork: a bug in a pack of its own kind "acts bigger"
   function teamCfg() {
@@ -204,6 +205,7 @@ var Sim = (function () {
       phase: rnd(0, 100),
       rest: 0,
       meals: 0,
+      baby: BABY_GRACE, // a brief protected childhood
     };
     bugs.push(bug);
     return bug;
@@ -305,7 +307,8 @@ var Sim = (function () {
     for (var e = eggs.length - 1; e >= 0; e--) {
       eggs[e].timer -= dt;
       if (eggs[e].timer <= 0) {
-        spawnBug(eggs[e].speciesId, eggs[e].x, eggs[e].y);
+        var hatchling = spawnBug(eggs[e].speciesId, eggs[e].x, eggs[e].y);
+        if (hatchling) hatchling.energy = 82; // a full belly of yolk to start life
         statFor(eggs[e].speciesId).born++;
         eggs.splice(e, 1);
       }
@@ -366,13 +369,14 @@ var Sim = (function () {
     var SURROUND = 48;
     for (var vk = bugs.length - 1; vk >= 0; vk--) {
       var victim = bugs[vk];
+      if (victim.baby > 0) continue; // babies are too little to bother hunting
       var vg = getSpecies(victim.speciesId).genes;
       var attackers = [], power = 0;
       for (var at = 0; at < bugs.length; at++) {
         var atk = bugs[at];
         if (atk === victim || atk.speciesId === victim.speciesId) continue;
         var ag = getSpecies(atk.speciesId).genes;
-        if (ag.diet !== "bugs" || atk.rest > 0) continue;       // only ready hunters attack
+        if (ag.diet !== "bugs" || atk.rest > 0 || atk.baby > 0) continue; // only grown, ready hunters attack
         if (vg.diet === "bugs" && vg.size >= ag.size) continue; // can't gang up a bigger hunter
         if (Math.hypot(atk.x - victim.x, atk.y - victim.y) < SURROUND) { attackers.push(atk); power += ag.size; }
       }
@@ -400,6 +404,7 @@ var Sim = (function () {
       var g = getSpecies(bug.speciesId).genes;
       bug.age += dt;
       bug.phase += dt;
+      if (bug.baby > 0) bug.baby -= dt; // grow out of the protected childhood
 
       // --- decide where to go ---
       var targetAngle = null;
@@ -465,7 +470,7 @@ var Sim = (function () {
           var struck = null, strikeD = 32;
           for (var k = 0; k < bugs.length; k++) {
             var cand = bugs[k];
-            if (cand === bug || cand.speciesId === bug.speciesId) continue; // never eat your own kind
+            if (cand === bug || cand.speciesId === bug.speciesId || cand.baby > 0) continue; // never your own kind, never a baby
             var cg = getSpecies(cand.speciesId).genes;
             if (effSize(cand, cg) < effSize(bug, g) * 0.85) {
               var pd = Math.hypot(cand.x - bug.x, cand.y - bug.y);
@@ -480,7 +485,7 @@ var Sim = (function () {
           var target = null, tDist = biome === "forest" ? 95 : 320;
           for (var k2 = 0; k2 < bugs.length; k2++) {
             var c2 = bugs[k2];
-            if (c2 === bug || c2.hidden || c2.speciesId === bug.speciesId) continue;
+            if (c2 === bug || c2.hidden || c2.speciesId === bug.speciesId || c2.baby > 0) continue;
             var cg2 = getSpecies(c2.speciesId).genes;
             if (cg2.diet === "bugs" && cg2.size >= g.size) continue; // not a bigger hunter
             if (effSize(c2, cg2) < effSize(bug, g) * 0.85) { // what my pack can handle now
@@ -493,7 +498,7 @@ var Sim = (function () {
             var bDist = biome === "forest" ? 130 : 340;
             for (var kb = 0; kb < bugs.length; kb++) {
               var cb = bugs[kb];
-              if (cb === bug || cb.hidden || cb.speciesId === bug.speciesId) continue;
+              if (cb === bug || cb.hidden || cb.speciesId === bug.speciesId || cb.baby > 0) continue;
               var cbg = getSpecies(cb.speciesId).genes;
               if (cbg.diet === "bugs" && cbg.size >= g.size) continue;
               if (effSize(cb, cbg) < maxEffSize(g) * 0.85) {
@@ -630,14 +635,18 @@ var Sim = (function () {
       } else {
         familyCap = Math.max(6, popCap * 0.25);
       }
-      // hunters lay after a good meal; grazers need a real energy surplus
-      var eggAt = g.diet === "bugs" ? 75 : 85;
+      // hunters lay after a good meal; grazers need a real energy surplus.
+      // little pack-hunters breed readily and cheaply so a pack can keep its
+      // numbers up (they lose members constantly to old age)
+      var packHunter = g.diet === "bugs" && g.size <= 1.0;
+      var eggAt = g.diet === "bugs" ? (packHunter ? 66 : 75) : 85;
+      var eggCost = packHunter ? 26 : 40;
       if (bug.energy > eggAt && bug.eggCd <= 0 &&
           bugs.length + eggs.length < popCap &&
           aliveCount(bug.speciesId) < familyCap) {
-        bug.energy -= 40;
+        bug.energy -= eggCost;
         bug.eggCd = rnd(12, 20) / (g.babies || 1); // busy families lay much faster
-        eggs.push({ x: bug.x + rnd(-10, 10), y: bug.y + rnd(-10, 10), speciesId: bug.speciesId, timer: 7 });
+        eggs.push({ x: bug.x + rnd(-10, 10), y: bug.y + rnd(-10, 10), speciesId: bug.speciesId, timer: 6 });
       }
 
       // starving or very old bugs poof away
@@ -673,6 +682,7 @@ var Sim = (function () {
       ctx.translate(bug.x, bug.y);
       ctx.rotate(bug.angle);
       if (bug.hidden) ctx.globalAlpha = 0.45; // peek-a-boo
+      if (bug.baby > 0) { var bs = 0.55 + 0.45 * (1 - bug.baby / BABY_GRACE); ctx.scale(bs, bs); } // little babies grow up
       if (sp.art) Render.drawArtBug(ctx, sp, bug.phase);
       else Render.drawBug(ctx, sp.genes, bug.phase);
       ctx.restore();

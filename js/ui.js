@@ -2,7 +2,7 @@
 
 var UI = (function () {
 
-  var BUGLAB_VERSION = "21";
+  var BUGLAB_VERSION = "22";
 
   var parentA = null;   // selected species for slot A
   var parentB = null;

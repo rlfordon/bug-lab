@@ -176,7 +176,8 @@
     if (!best) { tipEl.classList.add("hidden"); return; }
 
     var status = "";
-    if (best.bug.hidden) status = "🤫 hiding";
+    if (best.bug.baby > 0) status = "🍼 just a baby";
+    else if (best.bug.hidden) status = "🤫 hiding";
     else if ((best.bug.pack || 0) >= 2) status = "🤝 teamed up!";
     else if (best.bug.rest > 0) status = "😴 full and sleepy";
     else if (best.bug.energy < 35) status = "🍽️ very hungry";
