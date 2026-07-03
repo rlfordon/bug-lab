@@ -134,6 +134,62 @@
     }
   }
 
+  // ---- hover tips: who IS that bug? ----
+  var tipEl = document.getElementById("bugTip");
+  var hoverPoint = null; // last mouse position in canvas pixels
+
+  canvas.addEventListener("mousemove", function (ev) {
+    hoverPoint = canvasPoint(ev);
+  });
+  canvas.addEventListener("mouseleave", function () { hoverPoint = null; });
+
+  function updateBugTip() {
+    if (!hoverPoint || dragging) { tipEl.classList.add("hidden"); return; }
+    var m = miniRect();
+    if (worldIsBig() && hoverPoint.x >= m.x && hoverPoint.y >= m.y) {
+      tipEl.classList.add("hidden");
+      return;
+    }
+    // which bug is under the mouse right now?
+    var wx = hoverPoint.x + cam.x, wy = hoverPoint.y + cam.y;
+    var best = null, bestD = Infinity;
+    Sim.bugList().forEach(function (bug) {
+      var sp = Sim.getSpecies(bug.speciesId);
+      if (!sp) return;
+      var d = Math.hypot(bug.x - wx, bug.y - wy);
+      if (d < 14 * sp.genes.size + 10 && d < bestD) {
+        bestD = d;
+        best = { bug: bug, sp: sp };
+      }
+    });
+    if (!best) { tipEl.classList.add("hidden"); return; }
+
+    var status = "";
+    if (best.bug.hidden) status = "🤫 hiding";
+    else if (best.bug.rest > 0) status = "😴 full and sleepy";
+    else if (best.bug.energy < 35) status = "🍽️ very hungry";
+    else if (best.bug.energy > 85) status = "💖 ready to lay an egg";
+
+    tipEl.innerHTML = "";
+    var name = document.createElement("div");
+    name.className = "tip-name";
+    name.textContent = (best.sp.legendary ? "🌟 " : "") + best.sp.name;
+    tipEl.appendChild(name);
+    if (status) {
+      var st = document.createElement("div");
+      st.className = "tip-status";
+      st.textContent = status;
+      tipEl.appendChild(st);
+    }
+
+    // anchor the tip just above the bug (it follows the bug around)
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = rect.width / canvas.width, scaleY = rect.height / canvas.height;
+    tipEl.style.left = (canvas.offsetLeft + (best.bug.x - cam.x) * scaleX) + "px";
+    tipEl.style.top = (canvas.offsetTop + (best.bug.y - cam.y - 16 * best.sp.genes.size) * scaleY) + "px";
+    tipEl.classList.remove("hidden");
+  }
+
   // ---- the game loop ----
   var lastTime = performance.now();
   var saveTimer = 0;
@@ -152,6 +208,7 @@
     Sim.draw(ctx, now / 1000);
     ctx.restore();
     drawMinimap();
+    updateBugTip();
 
     saveTimer += dt;
     if (saveTimer > 5) { saveTimer = 0; Sim.save(); }

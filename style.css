@@ -104,6 +104,21 @@ main { display: flex; justify-content: center; padding: 14px; }
 }
 #toast.show { opacity: 1; }
 
+#bugTip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  background: var(--cream);
+  border: 2px solid var(--brown);
+  border-radius: 10px;
+  padding: 3px 10px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 5;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}
+#bugTip .tip-name { font-size: 0.9rem; font-weight: bold; }
+#bugTip .tip-status { font-size: 0.75rem; }
+
 .terra-bar {
   display: flex;
   align-items: center;

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bug Lab 🐛</title>
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -23,6 +23,7 @@
   <section id="screen-terrarium" class="screen active">
     <canvas id="world" width="960" height="600"></canvas>
     <div id="toast"></div>
+    <div id="bugTip" class="hidden"></div>
     <div class="terra-bar">
       <span class="terra-tip">🍃 Click to drop leaves · ✋ drag or arrow keys to explore!</span>
       <button id="freshGardenBtn">🌍 Grow a new world</button>
@@ -126,11 +127,11 @@
 
 <!-- Kid-editable data first, then the engine -->
 <!-- (?v= numbers stop the browser mixing old and new copies — bump them together) -->
-<script src="bugs.js?v=5"></script>
-<script src="js/genes.js?v=5"></script>
-<script src="js/render.js?v=5"></script>
-<script src="js/sim.js?v=5"></script>
-<script src="js/ui.js?v=5"></script>
-<script src="js/main.js?v=5"></script>
+<script src="bugs.js?v=6"></script>
+<script src="js/genes.js?v=6"></script>
+<script src="js/render.js?v=6"></script>
+<script src="js/sim.js?v=6"></script>
+<script src="js/ui.js?v=6"></script>
+<script src="js/main.js?v=6"></script>
 </body>
 </html>
