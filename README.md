@@ -32,6 +32,10 @@ Designer Panel.
   defined in `bugs.js`, so he can eventually invent his own.
 - **🧪 The Lab** — pick two bugs, hit MIX, and release your new species.
   Mutations happen sometimes… ✨
+- **🛠️ Bug Maker** (unlocks at 10 species) — design a bug from scratch:
+  pick its stats, colors, and parts with sliders and buttons, or switch to
+  **✏️ Draw it myself** and hand-draw your bug with a paint canvas. Drawn
+  bugs walk around the garden wearing your art.
 - **📖 Journal** — a page for every species ever discovered or invented.
 - **🌟 Legendaries** — six secret bugs with hidden recipes. If a mix produces
   the right combination of genes, it *becomes* the legendary (golden card,

@@ -47,6 +47,7 @@ var SETTINGS = {
 // ----------------------------------------------------------------
 var UNLOCKS = {
   bigWorld: 8,
+  maker: 10,   // the Bug Maker: design bugs from scratch!
   flavors: { meadow: 0, forest: 12, desert: 16, snow: 20, wild: 25 },
 };
 

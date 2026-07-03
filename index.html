@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bug Lab 🐛</title>
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 
@@ -13,6 +13,7 @@
   <nav id="tabs">
     <button class="tab active" data-screen="terrarium">🌿 Terrarium</button>
     <button class="tab" data-screen="lab">🧪 The Lab</button>
+    <button class="tab" data-screen="maker" id="makerTab">🛠️ Bug Maker</button>
     <button class="tab" data-screen="journal">📖 Journal</button>
   </nav>
   <div id="popcount">🐞 0</div>
@@ -67,6 +68,47 @@
         <select id="labSort"></select>
       </div>
       <div id="labPicker" class="card-grid"></div>
+    </div>
+  </section>
+
+  <!-- ===== BUG MAKER ===== -->
+  <section id="screen-maker" class="screen">
+    <div class="maker-wrap">
+      <h2>🛠️ Bug Maker</h2>
+      <div class="maker-top">
+        <div class="maker-preview-box">
+          <canvas id="makerPreview" width="220" height="220"></canvas>
+          <div class="maker-name-row">
+            <input type="text" id="makerName" maxlength="18" placeholder="Name your bug…">
+            <button id="makerDice" title="Random name">🎲</button>
+          </div>
+          <input type="text" id="makerFlavor" maxlength="70" placeholder="Say something about it…">
+        </div>
+        <div class="maker-look">
+          <div class="mode-toggle">
+            <button id="modeGenes" class="mode-btn active">🧬 Built from genes</button>
+            <button id="modeDraw" class="mode-btn">✏️ Draw it myself</button>
+          </div>
+          <div id="genesControls"></div>
+          <div id="drawControls" class="hidden">
+            <div class="draw-wrap">
+              <canvas id="drawCanvas" width="240" height="240"></canvas>
+            </div>
+            <div id="palette"></div>
+            <div class="draw-tools">
+              <button class="brush-btn" data-brush="4">•</button>
+              <button class="brush-btn active" data-brush="10">●</button>
+              <button class="brush-btn" data-brush="22">⬤</button>
+              <button id="eraserBtn">🧽 Eraser</button>
+              <button id="undoBtn">↩️ Undo</button>
+              <button id="clearBtn">🗑️ Clear</button>
+            </div>
+            <p class="draw-hint">Draw your bug facing right ➡️ — that's the way it walks!</p>
+          </div>
+        </div>
+      </div>
+      <div id="statControls"></div>
+      <button id="makerRelease">🌿 Release 3 into the garden!</button>
     </div>
   </section>
 
@@ -132,11 +174,11 @@
 
 <!-- Kid-editable data first, then the engine -->
 <!-- (?v= numbers stop the browser mixing old and new copies — bump them together) -->
-<script src="bugs.js?v=7"></script>
-<script src="js/genes.js?v=7"></script>
-<script src="js/render.js?v=7"></script>
-<script src="js/sim.js?v=7"></script>
-<script src="js/ui.js?v=7"></script>
-<script src="js/main.js?v=7"></script>
+<script src="bugs.js?v=8"></script>
+<script src="js/genes.js?v=8"></script>
+<script src="js/render.js?v=8"></script>
+<script src="js/sim.js?v=8"></script>
+<script src="js/ui.js?v=8"></script>
+<script src="js/main.js?v=8"></script>
 </body>
 </html>

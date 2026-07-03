@@ -42,6 +42,7 @@ var Sim = (function () {
     var u = typeof UNLOCKS !== "undefined" ? UNLOCKS : {};
     return {
       bigWorld: u.bigWorld || 8,
+      maker: u.maker || 10,
       flavors: u.flavors || { meadow: 0, forest: 12, desert: 16, snow: 20, wild: 25 },
     };
   }
@@ -64,6 +65,10 @@ var Sim = (function () {
         food.push({ x: spot.x, y: spot.y, wob: rnd(0, Math.PI * 2) });
       }
       toast("🎉 " + bestSpecies + " species! Your garden GREW into a whole world — explore it!");
+      return;
+    }
+    if (prev < cfg.maker && bestSpecies >= cfg.maker) {
+      toast("🔓 The 🛠️ Bug Maker is unlocked — design your own bug!");
       return;
     }
     for (var key in cfg.flavors) {
@@ -468,7 +473,8 @@ var Sim = (function () {
       ctx.translate(bug.x, bug.y);
       ctx.rotate(bug.angle);
       if (bug.hidden) ctx.globalAlpha = 0.45; // peek-a-boo
-      Render.drawBug(ctx, sp.genes, bug.phase);
+      if (sp.art) Render.drawArtBug(ctx, sp, bug.phase);
+      else Render.drawBug(ctx, sp.genes, bug.phase);
       ctx.restore();
       if (sp.legendary) {
         Render.drawSparkles(ctx, bug.x, bug.y, bug.phase, 24 * sp.genes.size);
@@ -678,7 +684,12 @@ var Sim = (function () {
     worldInfo: function () { return { seed: worldSeed, flavor: worldFlavor }; },
     progress: function () {
       var cfg = unlocksCfg();
-      return { species: bestSpecies, bigWorld: bigUnlocked(), bigWorldAt: cfg.bigWorld, flavors: cfg.flavors };
+      return {
+        species: bestSpecies,
+        bigWorld: bigUnlocked(), bigWorldAt: cfg.bigWorld,
+        makerUnlocked: bestSpecies >= cfg.maker, makerAt: cfg.maker,
+        flavors: cfg.flavors,
+      };
     },
     flavorUnlocked: flavorUnlocked,
     setToast: function (fn) { toast = fn; },

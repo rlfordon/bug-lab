@@ -118,7 +118,7 @@ var UI = (function () {
     canvas.width = big ? 130 : 100;
     canvas.height = big ? 130 : 100;
     card.appendChild(canvas);
-    Render.drawPortrait(canvas, sp.genes);
+    Render.drawPortraitFor(canvas, sp);
 
     var name = document.createElement("div");
     name.className = "card-name";
@@ -139,7 +139,10 @@ var UI = (function () {
 
       var chips = document.createElement("div");
       chips.className = "trait-chips";
-      Genes.traitChips(sp.genes).forEach(function (c) {
+      var chipList = Genes.traitChips(sp.genes);
+      if (sp.art) chipList.unshift("🎨 hand-drawn");
+      else if (sp.made) chipList.unshift("🛠️ handmade");
+      chipList.forEach(function (c) {
         var chip = document.createElement("span");
         chip.textContent = c;
         chips.appendChild(chip);
@@ -240,7 +243,7 @@ var UI = (function () {
     var ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (sp) {
-      Render.drawPortrait(canvas, sp.genes);
+      Render.drawPortraitFor(canvas, sp);
       name.textContent = sp.name;
       slotEl.classList.add("filled");
     } else {
@@ -502,6 +505,261 @@ var UI = (function () {
     });
   }
 
+  // ---------- the bug maker ----------
+  var makerGenes = {
+    size: 1, speed: 1, babies: 1, hue: 200, hue2: 40,
+    segments: 2, legPairs: 3, wings: 1, eyes: 2,
+    antennae: 2, pattern: "spots", diet: "plants", shy: true,
+  };
+  var makerMode = "genes"; // or "draw"
+  var drawCanvas, drawCtx, drawColor = "#3b2a1a", brushSize = 10, erasing = false;
+  var drawUndo = [];
+  var previewT = 0;
+
+  var LOOK_CONTROLS = [
+    { key: "segments", label: "Body parts", options: [1, 2, 3] },
+    { key: "legPairs", label: "Leg pairs", options: [2, 3, 4] },
+    { key: "wings", label: "Wings", options: [0, 1, 2], names: ["none", "little", "BIG"] },
+    { key: "eyes", label: "Eyes", options: [1, 2, 3] },
+    { key: "antennae", label: "Feelers", options: [0, 1, 2] },
+    { key: "pattern", label: "Pattern", options: ["plain", "spots", "stripes"] },
+  ];
+  var STAT_SLIDERS = [
+    { key: "size", label: "Size 🐘", min: 0.5, max: 2.2 },
+    { key: "speed", label: "Speed ⚡", min: 0.4, max: 2.8 },
+    { key: "babies", label: "Egg speed 🥚", min: 0.4, max: 2 },
+  ];
+  var PALETTE = ["#3b2a1a", "#e05c5c", "#ff8c42", "#ffd166", "#7ec850", "#2f6b1d",
+                 "#5fb8e0", "#3b6fd4", "#b57ee0", "#ff8fb1", "#ffffff", "#9a9a92"];
+
+  function makePickRow(spec) {
+    var row = document.createElement("div");
+    row.className = "pick-row";
+    var lab = document.createElement("span");
+    lab.className = "pick-label";
+    lab.textContent = spec.label;
+    row.appendChild(lab);
+    spec.options.forEach(function (opt, i) {
+      var b = document.createElement("button");
+      b.className = "pick-btn" + (makerGenes[spec.key] === opt ? " active" : "");
+      b.textContent = spec.names ? spec.names[i] : opt;
+      b.addEventListener("click", function () {
+        makerGenes[spec.key] = opt;
+        row.querySelectorAll(".pick-btn").forEach(function (x) { x.classList.remove("active"); });
+        b.classList.add("active");
+      });
+      row.appendChild(b);
+    });
+    return row;
+  }
+
+  function makeHueRow(key, label) {
+    var row = document.createElement("div");
+    row.className = "hue-row";
+    var lab = document.createElement("span");
+    lab.className = "pick-label";
+    lab.textContent = label;
+    row.appendChild(lab);
+    var slider = document.createElement("input");
+    slider.type = "range";
+    slider.min = 0; slider.max = 360; slider.value = makerGenes[key];
+    slider.className = "hue-slider";
+    slider.addEventListener("input", function () { makerGenes[key] = parseInt(slider.value, 10); });
+    row.appendChild(slider);
+    return row;
+  }
+
+  function buildMakerControls() {
+    var looks = document.getElementById("genesControls");
+    looks.appendChild(makeHueRow("hue", "Body color"));
+    looks.appendChild(makeHueRow("hue2", "Marking color"));
+    LOOK_CONTROLS.forEach(function (spec) { looks.appendChild(makePickRow(spec)); });
+
+    var stats = document.getElementById("statControls");
+    STAT_SLIDERS.forEach(function (spec) {
+      var row = document.createElement("div");
+      row.className = "stat-slider-row";
+      var lab = document.createElement("span");
+      lab.className = "pick-label";
+      lab.textContent = spec.label;
+      var val = document.createElement("b");
+      val.textContent = makerGenes[spec.key].toFixed(2);
+      var slider = document.createElement("input");
+      slider.type = "range";
+      slider.min = spec.min; slider.max = spec.max; slider.step = 0.05;
+      slider.value = makerGenes[spec.key];
+      slider.addEventListener("input", function () {
+        makerGenes[spec.key] = parseFloat(slider.value);
+        val.textContent = makerGenes[spec.key].toFixed(2);
+      });
+      row.appendChild(lab);
+      row.appendChild(slider);
+      row.appendChild(val);
+      stats.appendChild(row);
+    });
+    stats.appendChild(makePickRow({ key: "diet", label: "Food", options: ["plants", "bugs"], names: ["🍃 leaves", "😈 hunts bugs"] }));
+    stats.appendChild(makePickRow({ key: "shy", label: "Heart", options: [true, false], names: ["🙈 shy", "💪 brave"] }));
+  }
+
+  // ----- the drawing canvas -----
+  function drawPointFromEvent(ev) {
+    var rect = drawCanvas.getBoundingClientRect();
+    return {
+      x: (ev.clientX - rect.left) * (drawCanvas.width / rect.width),
+      y: (ev.clientY - rect.top) * (drawCanvas.height / rect.height),
+    };
+  }
+
+  function initDrawing() {
+    drawCanvas = document.getElementById("drawCanvas");
+    drawCtx = drawCanvas.getContext("2d");
+    var sketching = false, lastPt = null;
+
+    function stroke(p) {
+      drawCtx.save();
+      if (erasing) drawCtx.globalCompositeOperation = "destination-out";
+      drawCtx.strokeStyle = drawColor;
+      drawCtx.lineWidth = brushSize;
+      drawCtx.lineCap = "round";
+      drawCtx.lineJoin = "round";
+      drawCtx.beginPath();
+      drawCtx.moveTo(lastPt.x, lastPt.y);
+      drawCtx.lineTo(p.x + 0.01, p.y + 0.01);
+      drawCtx.stroke();
+      drawCtx.restore();
+      lastPt = p;
+    }
+
+    drawCanvas.addEventListener("pointerdown", function (ev) {
+      ev.preventDefault();
+      sketching = true;
+      try { drawCanvas.setPointerCapture(ev.pointerId); } catch (err) {}
+      drawUndo.push(drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
+      if (drawUndo.length > 25) drawUndo.shift();
+      lastPt = drawPointFromEvent(ev);
+      stroke(lastPt);
+    });
+    drawCanvas.addEventListener("pointermove", function (ev) {
+      if (sketching) stroke(drawPointFromEvent(ev));
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(function (evt) {
+      drawCanvas.addEventListener(evt, function () { sketching = false; });
+    });
+
+    // palette swatches
+    var paletteBox = document.getElementById("palette");
+    PALETTE.forEach(function (col, i) {
+      var b = document.createElement("button");
+      b.className = "swatch" + (i === 0 ? " active" : "");
+      b.style.background = col;
+      b.addEventListener("click", function () {
+        drawColor = col;
+        erasing = false;
+        document.getElementById("eraserBtn").classList.remove("active");
+        paletteBox.querySelectorAll(".swatch").forEach(function (x) { x.classList.remove("active"); });
+        b.classList.add("active");
+      });
+      paletteBox.appendChild(b);
+    });
+
+    document.getElementById("eraserBtn").addEventListener("click", function () {
+      erasing = true;
+      this.classList.add("active");
+      paletteBox.querySelectorAll(".swatch").forEach(function (x) { x.classList.remove("active"); });
+    });
+    document.querySelectorAll(".brush-btn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        brushSize = parseInt(b.dataset.brush, 10);
+        document.querySelectorAll(".brush-btn").forEach(function (x) { x.classList.remove("active"); });
+        b.classList.add("active");
+      });
+    });
+    document.getElementById("undoBtn").addEventListener("click", function () {
+      if (drawUndo.length) drawCtx.putImageData(drawUndo.pop(), 0, 0);
+    });
+    document.getElementById("clearBtn").addEventListener("click", function () {
+      drawUndo.push(drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
+      drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    });
+  }
+
+  function drawingHasInk() {
+    var data = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height).data;
+    for (var i = 3; i < data.length; i += 32) {
+      if (data[i] > 0) return true;
+    }
+    return false;
+  }
+
+  // ----- live preview -----
+  function renderMakerPreview() {
+    var c = document.getElementById("makerPreview");
+    var ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.save();
+    ctx.translate(c.width / 2, c.height / 2);
+    if (makerMode === "draw") {
+      ctx.rotate(Math.sin(previewT * 4) * 0.06);
+      ctx.drawImage(drawCanvas, -c.width * 0.42, -c.height * 0.42, c.width * 0.84, c.height * 0.84);
+    } else {
+      var scale = (c.width / 110) / Math.max(0.8, makerGenes.size * 0.9);
+      ctx.scale(scale, scale);
+      Render.drawBug(ctx, makerGenes, previewT);
+    }
+    ctx.restore();
+  }
+
+  function setMakerMode(mode) {
+    makerMode = mode;
+    document.getElementById("modeGenes").classList.toggle("active", mode === "genes");
+    document.getElementById("modeDraw").classList.toggle("active", mode === "draw");
+    document.getElementById("genesControls").classList.toggle("hidden", mode === "draw");
+    document.getElementById("drawControls").classList.toggle("hidden", mode === "genes");
+  }
+
+  function releaseMakerBug() {
+    if (makerMode === "draw" && !drawingHasInk()) {
+      toast("Draw your bug first! ✏️");
+      return;
+    }
+    var name = document.getElementById("makerName").value.trim();
+    if (!name) name = Genes.makeName(Sim.speciesList().map(function (s) { return s.name; }));
+    var taken = Sim.speciesList().some(function (s) { return s.name.toLowerCase() === name.toLowerCase(); });
+    if (taken) {
+      toast("There's already a bug named " + name + "! Pick another name.");
+      return;
+    }
+    var flavor = document.getElementById("makerFlavor").value.trim() || Genes.pick(FLAVOR_LINES);
+    var sp = Sim.addSpecies(name, flavor, JSON.parse(JSON.stringify(makerGenes)), false, false);
+    sp.made = true;
+    if (makerMode === "draw") sp.art = drawCanvas.toDataURL("image/png");
+    Sim.releaseSpecies(sp.id, 3);
+    Sim.save();
+    toast("Three little " + sp.name + "s scurry into the garden! 🎉");
+    document.getElementById("makerName").value = "";
+    document.getElementById("makerFlavor").value = "";
+    showScreen("terrarium");
+  }
+
+  function initMaker() {
+    buildMakerControls();
+    initDrawing();
+    document.getElementById("modeGenes").addEventListener("click", function () { setMakerMode("genes"); });
+    document.getElementById("modeDraw").addEventListener("click", function () { setMakerMode("draw"); });
+    document.getElementById("makerDice").addEventListener("click", function () {
+      document.getElementById("makerName").value =
+        Genes.makeName(Sim.speciesList().map(function (s) { return s.name; }));
+    });
+    document.getElementById("makerRelease").addEventListener("click", releaseMakerBug);
+    // keep the preview alive while the maker is open
+    setInterval(function () {
+      if (document.getElementById("screen-maker").classList.contains("active")) {
+        previewT += 0.09;
+        renderMakerPreview();
+      }
+    }, 90);
+  }
+
   // ---------- world stats (inside the designer panel) ----------
   function renderStats() {
     var list = document.getElementById("statsList");
@@ -548,7 +806,13 @@ var UI = (function () {
     Sim.setToast(toast);
 
     document.querySelectorAll(".tab").forEach(function (tab) {
-      tab.addEventListener("click", function () { showScreen(tab.dataset.screen); });
+      tab.addEventListener("click", function () {
+        if (tab.dataset.screen === "maker" && !Sim.progress().makerUnlocked) {
+          toast("🔒 The Bug Maker unlocks at " + Sim.progress().makerAt + " species — keep mixing!");
+          return;
+        }
+        showScreen(tab.dataset.screen);
+      });
     });
 
     initWorldPicker();
@@ -561,12 +825,16 @@ var UI = (function () {
     });
 
     initCollectionTools();
+    initMaker();
     initDesigner();
     updateSlots();
   }
 
   function updatePopCount() {
     document.getElementById("popcount").textContent = "🐞 " + Sim.bugCount();
+    var makerTab = document.getElementById("makerTab");
+    var label = Sim.progress().makerUnlocked ? "🛠️ Bug Maker" : "🔒 Bug Maker";
+    if (makerTab.textContent !== label) makerTab.textContent = label;
   }
 
   return { init: init, toast: toast, updatePopCount: updatePopCount };

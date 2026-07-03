@@ -201,6 +201,45 @@ var Render = (function () {
     ctx.restore();
   }
 
+  // ---- hand-drawn bugs: the player's art becomes the creature ----
+  var artCache = {};
+  function artImage(sp) {
+    var img = artCache[sp.id];
+    if (!img) {
+      img = new Image();
+      img.src = sp.art;
+      artCache[sp.id] = img;
+    }
+    return img;
+  }
+
+  // caller has already translated/rotated to the bug's position & heading
+  function drawArtBug(ctx, sp, t) {
+    var img = artImage(sp);
+    if (!img.complete || !img.naturalWidth) return;
+    var w = 52 * sp.genes.size;
+    ctx.save();
+    ctx.rotate(Math.sin(t * 9) * 0.07); // a happy little waddle
+    ctx.drawImage(img, -w / 2, -w / 2, w, w);
+    ctx.restore();
+  }
+
+  // portrait that respects hand-drawn art
+  function drawPortraitFor(canvas, sp) {
+    if (sp.art) {
+      var ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      var img = artImage(sp);
+      var paint = function () {
+        ctx.drawImage(img, canvas.width * 0.08, canvas.height * 0.08, canvas.width * 0.84, canvas.height * 0.84);
+      };
+      if (img.complete && img.naturalWidth) paint();
+      else img.addEventListener("load", paint, { once: true });
+    } else {
+      drawPortrait(canvas, sp.genes);
+    }
+  }
+
   // ================================================================
   //  PROCEDURAL WORLD GENERATION
   //  The whole garden grows from one "seed" number plus a world
@@ -644,6 +683,8 @@ var Render = (function () {
   return {
     drawBug: drawBug,
     drawPortrait: drawPortrait,
+    drawPortraitFor: drawPortraitFor,
+    drawArtBug: drawArtBug,
     drawSilhouette: drawSilhouette,
     drawSparkles: drawSparkles,
     drawBackground: drawBackground,
