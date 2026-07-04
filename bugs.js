@@ -33,9 +33,11 @@ var SETTINGS = {
 //    maxMates:   teamwork stops helping past this many buddies
 // ----------------------------------------------------------------
 var TEAMWORK = {
-  packRadius: 82,
-  strength: 0.42,
-  maxMates: 4,
+  packRadius: 80,   // how close buddies must be to team up
+  strength: 0.42,   // how much bigger each teammate makes the group act
+  maxMates: 4,      // teamwork stops helping past this many buddies
+  cohesion: 1,      // how strongly bugs flock with their own kind (0 = loners)
+  separation: 24,   // how much personal space flockmates keep (0 = pile up)
 };
 
 

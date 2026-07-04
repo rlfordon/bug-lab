@@ -62,6 +62,11 @@ with `?v=N` in `index.html` — bump them together when editing the code).
 
 ## The secret (parents only!)
 
+The panel also has live **🐝 Group behavior** sliders — team power, flock
+togetherness, personal space, and team range — which are wildly fun to mess
+with (crank flock togetherness up and personal space down for a single giant
+super-swarm, or drop teamwork to zero to make everyone a loner).
+
 There are three secret ways to open the **Designer Panel**: press
 **`` ` ``** (the backtick key, if your keyboard has one), **type the word
 `magic`**, or **click the 🐛 Bug Lab title five times fast**. Inside:

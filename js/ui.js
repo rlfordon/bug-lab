@@ -2,7 +2,7 @@
 
 var UI = (function () {
 
-  var BUGLAB_VERSION = "23";
+  var BUGLAB_VERSION = "24";
 
   var parentA = null;   // selected species for slot A
   var parentB = null;
@@ -417,6 +417,7 @@ var UI = (function () {
 
   // ---------- the secret designer panel ----------
   var SLIDERS = ["simSpeed", "mutationRate", "foodRate", "bugSpeedMult", "maxBugs"];
+  var GROUP_SLIDERS = ["strength", "cohesion", "separation", "packRadius"];
 
   function buildDiagnostics() {
     var save = "";
@@ -452,16 +453,20 @@ var UI = (function () {
       }
     });
 
-    SLIDERS.forEach(function (key) {
+    // world sliders live on SETTINGS; group-behavior sliders live on TEAMWORK
+    function wireSlider(key, obj) {
       var slider = document.getElementById("s-" + key);
       var label = document.getElementById("v-" + key);
-      slider.value = SETTINGS[key];
-      label.textContent = SETTINGS[key];
+      if (!slider) return;
+      slider.value = obj[key];
+      label.textContent = obj[key];
       slider.addEventListener("input", function () {
-        SETTINGS[key] = parseFloat(slider.value);
+        obj[key] = parseFloat(slider.value);
         label.textContent = slider.value;
       });
-    });
+    }
+    SLIDERS.forEach(function (key) { wireSlider(key, SETTINGS); });
+    GROUP_SLIDERS.forEach(function (key) { wireSlider(key, TEAMWORK); });
 
     // three secret ways in: press ` … or type "magic" … or
     // click the 🐛 Bug Lab title five times fast

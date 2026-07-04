@@ -113,7 +113,13 @@ var Sim = (function () {
   // teamwork: a bug in a pack of its own kind "acts bigger"
   function teamCfg() {
     var t = typeof TEAMWORK !== "undefined" ? TEAMWORK : {};
-    return { radius: t.packRadius || 78, strength: t.strength || 0.28, maxMates: t.maxMates || 4 };
+    return {
+      radius: t.packRadius || 78,
+      strength: t.strength != null ? t.strength : 0.28,
+      maxMates: t.maxMates || 4,
+      cohesion: t.cohesion != null ? t.cohesion : 1,
+      separation: t.separation != null ? t.separation : 24,
+    };
   }
   function packMult(bug) {
     var c = teamCfg();
@@ -134,7 +140,7 @@ var Sim = (function () {
     c *= g.shy ? 1.3 : 0.8;
     // little hunters are pack animals (wolves, ants); big hunters are lone apexes
     if (g.diet === "bugs") c *= g.size <= 1.0 ? 1.5 : 0.5;
-    return Math.max(0, Math.min(1.8, c));
+    return Math.max(0, Math.min(1.8, c)) * teamCfg().cohesion; // global flock dial
   }
 
   // the biggest a bug could ever "fight" with a full pack behind it
@@ -348,7 +354,7 @@ var Sim = (function () {
     // and remember the middle of the group, so kin can stick together
     var teamRadius = teamCfg().radius;
     var cohereRadius = teamRadius * 1.6;
-    var SEP_DIST = 24; // flockmates keep at least this far apart (no piling up)
+    var SEP_DIST = teamCfg().separation; // flockmates keep this far apart (live dial)
     for (var pi = 0; pi < bugs.length; pi++) {
       var pb = bugs[pi];
       var mates = 0, sumX = 0, sumY = 0, near = 0, nearestD = 1e9, nearest = null;
@@ -599,10 +605,10 @@ var Sim = (function () {
 
       // SEPARATION: never pile onto a flockmate — shuffle apart so the group
       // stays spread over food instead of collapsing into a starving ball
-      if (!frozen && bug.sep) {
+      if (!frozen && bug.sep && SEP_DIST > 0) {
         var awayA = Math.atan2(bug.sep.y, bug.sep.x);
         var sepD = Math.atan2(Math.sin(awayA - bug.angle), Math.cos(awayA - bug.angle));
-        bug.angle += sepD * Math.min(1, dt * 3 * (1 - bug.sep.d / 24));
+        bug.angle += sepD * Math.min(1, dt * 3 * (1 - bug.sep.d / SEP_DIST));
       }
 
       // stay out of ponds — slide around the shore instead of

@@ -413,6 +413,12 @@ main { display: flex; justify-content: center; padding: 14px; }
 #unlockAllBtn { background: #ffd166; color: #6b4a2b; font-weight: bold; }
 .designer-version { font-size: 0.72rem; opacity: 0.55; margin-top: 6px; }
 .designer-hint { font-size: 0.8rem; opacity: 0.75; margin-top: 18px; }
+.designer-group-title {
+  margin: 14px 0 8px;
+  font-size: 1rem;
+  border-top: 2px solid rgba(255, 255, 255, 0.2);
+  padding-top: 12px;
+}
 
 #statsBox {
   margin-top: 16px;
