@@ -423,10 +423,12 @@ var Sim = (function () {
       var urgency = 1;
       var frozen = false;
       var biome = Render.biomeAt(bug.x, bug.y);
+      // too hungry to keep hiding — better to risk the open than starve for sure
+      var desperate = bug.energy < 42;
 
       if (bug.rest > 0) bug.rest -= dt; // hunters nap after a big meal
 
-      // 1) danger! run from bigger hunters
+      // 1) danger! run from bigger hunters (unless too starved to care)
       var fleeRange = g.shy ? 150 : 105;
       var nearestHunter = null, hunterDist = fleeRange;
       for (var j = 0; j < bugs.length; j++) {
@@ -439,7 +441,7 @@ var Sim = (function () {
           if (d < hunterDist) { hunterDist = d; nearestHunter = other; }
         }
       }
-      if (nearestHunter) {
+      if (nearestHunter && !desperate) {
         var wingBoost = g.wings * 0.25;  // wings make great escape gear
         var cover = null;
         if (g.size <= HIDE_SIZE && !bug.hidden) {
@@ -476,9 +478,10 @@ var Sim = (function () {
           poofs.push({ x: victim.x, y: victim.y, t: 0 });
           bugs.splice(bugs.indexOf(victim), 1);
         };
-        if (bug.hidden) {
+        if (bug.hidden && !desperate) {
           // AMBUSH! lunge from the flower at anything that strays close —
           // even a bug hiding in the same bush isn't safe from a lurker
+          // (a starving lurker gives up and goes hunting in the open instead)
           var struck = null, strikeD = 32;
           for (var k = 0; k < bugs.length; k++) {
             var cand = bugs[k];
