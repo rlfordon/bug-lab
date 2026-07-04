@@ -348,9 +348,10 @@ var Sim = (function () {
     // and remember the middle of the group, so kin can stick together
     var teamRadius = teamCfg().radius;
     var cohereRadius = teamRadius * 1.6;
+    var SEP_DIST = 24; // flockmates keep at least this far apart (no piling up)
     for (var pi = 0; pi < bugs.length; pi++) {
       var pb = bugs[pi];
-      var mates = 0, sumX = 0, sumY = 0, near = 0;
+      var mates = 0, sumX = 0, sumY = 0, near = 0, nearestD = 1e9, nearest = null;
       for (var pj = 0; pj < bugs.length; pj++) {
         if (pj === pi) continue;
         var ob = bugs[pj];
@@ -358,9 +359,14 @@ var Sim = (function () {
         var dist = Math.hypot(ob.x - pb.x, ob.y - pb.y);
         if (dist < teamRadius) mates++;
         if (dist < cohereRadius) { sumX += ob.x; sumY += ob.y; near++; }
+        if (dist < nearestD) { nearestD = dist; nearest = ob; }
       }
       pb.pack = mates;
       pb.kin = near > 0 ? { x: sumX / near, y: sumY / near } : null;
+      // if a flockmate is right on top of me, remember which way to shuffle over
+      pb.sep = (nearest && nearestD < SEP_DIST)
+        ? { x: pb.x - nearest.x, y: pb.y - nearest.y, d: nearestD }
+        : null;
     }
 
     // PACK TAKEDOWNS: whenever enough hunters cluster around a bug, they bring
@@ -569,8 +575,9 @@ var Sim = (function () {
         // turn toward the target smoothly
         var diff = Math.atan2(Math.sin(targetAngle - bug.angle), Math.cos(targetAngle - bug.angle));
         bug.angle += diff * Math.min(1, dt * 6);
-        // social bugs keep loosely together even while busy foraging
-        if (bug.kin && urgency < 1.6) {
+        // well-fed social bugs keep loosely together even while busy — but a
+        // hungry bug breaks from the flock to go find food (no starving in a clump!)
+        if (bug.kin && urgency < 1.6 && bug.energy > 62) {
           var cohb = cohesionFor(g);
           if (cohb > 0.4) {
             var tk = Math.atan2(bug.kin.y - bug.y, bug.kin.x - bug.x);
@@ -578,9 +585,9 @@ var Sim = (function () {
             bug.angle += kdb * Math.min(0.5, dt * 0.5 * cohb);
           }
         }
-      } else if (bug.kin && cohesionFor(g) > 0.15) {
-        // wandering, but drift toward kin — tight schoolers pull hard and
-        // wander little; loners barely notice their neighbors
+      } else if (bug.kin && bug.energy > 62 && cohesionFor(g) > 0.15) {
+        // well-fed and wandering: drift toward kin. tight schoolers pull hard
+        // and wander little; loners barely notice their neighbors
         var coh = cohesionFor(g);
         var toKin = Math.atan2(bug.kin.y - bug.y, bug.kin.x - bug.x);
         var kd = Math.atan2(Math.sin(toKin - bug.angle), Math.cos(toKin - bug.angle));
@@ -588,6 +595,14 @@ var Sim = (function () {
       } else {
         // just wandering
         bug.angle += rnd(-1, 1) * dt * 2.2;
+      }
+
+      // SEPARATION: never pile onto a flockmate — shuffle apart so the group
+      // stays spread over food instead of collapsing into a starving ball
+      if (!frozen && bug.sep) {
+        var awayA = Math.atan2(bug.sep.y, bug.sep.x);
+        var sepD = Math.atan2(Math.sin(awayA - bug.angle), Math.cos(awayA - bug.angle));
+        bug.angle += sepD * Math.min(1, dt * 3 * (1 - bug.sep.d / 24));
       }
 
       // stay out of ponds — slide around the shore instead of
